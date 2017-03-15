@@ -4,6 +4,21 @@ import graphs
 import json
 import plato
 from z3 import *
+from docopt import docopt
+
+usage = """ copt.py
+
+Usage:
+  copt.py [--plato] [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copt.py --version
+
+Options:
+  -p --plato          Load problem file in Plato format.
+  -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
+  -o --output=<file>  Write solution to json file.
+  -q --quiet          Suppress output.
+
+"""
 
 def get_circuit_blist(atom_decompositions, bit_encoding, circuit):
 	"""
@@ -135,39 +150,67 @@ def optimize(problem, mode="unique"):
 		m = s.model()
 		counts = {c:m[d[c][1]].as_long() for c in concepts}
 		sol_cost_list = [counts[c] * costs.get(c, 1) for c in concepts]
-		solution_cost = sum(sol_cost_list)
-		print "\nSolution :\n"
+		solution = {
+			"cost": sum(sol_cost_list)
+		}
 		if mode == "unique":
-			present = [c for c in concepts if m[d[c][1]].as_long() > 0]
-			print present
+			solution["circuit"] = [c for c in concepts if m[d[c][1]].as_long() > 0]
 		else:
+			solution["circuit"] = []
 			for concept in concepts:
 				units = m[d[concept][1]].as_long()
 				if units > 0:
-					print concept, "x", units
-		print "\nCost : %d" % solution_cost
+					solution["circuit"] += [concept] * units
+		return solution
 	else:
-		print "unsat"
+		print None
 
-def test_plato():
-	file = "examples/circuit1.json"
-	plato_problem = load_problem_file(file)
-	problem = plato.parse(plato_problem)
-	optimize(problem)
+def print_solution(solution):
+	if solution is None:
+		print "unsat"
+	else:
+		lines = [
+			"Solution:",
+			"",
+			json.dumps(solution["circuit"]),
+			"",
+			"Cost : %d" % solution["cost"]
+		]
+		for line in lines:
+			print line
+
+def write_solution(file, solution):
+	with open(file, "w") as f:
+		json.dump(solution, f, indent=4)
 
 def load_problem_file(file):
 	with open(file, "r") as f:
 		problem = json.load(f)
 	return problem
 
-def test_basic():
-	problem = load_problem_file("examples/problem1.json")
-	mode = "unique" # unique/count
-	optimize(problem, mode)
+def print_problem(problem):
+	stats = [
+		("Circuit Elements", len(problem["circuit"])),
+		("Unique Cost Elements", len(problem["costs"])),
+		("Unique Decompositions", len(problem["decompositions"]))
+	]
+	for tup in stats:
+		print "%-26s : %d" % tup
+	print ""
 
 def main():
-
-	test_plato()
+	args = docopt(usage, version="copt.py 0.1")
+	content = load_problem_file(args["<problem.json>"])
+	problem = plato.parse(content) if args["--plato"] else content
+	mode = args.get("<m>", "unique")
+	if mode not in ["unique", "count"]:
+		raise Exception("Invalid mode: %s" % mode)
+	solution = optimize(problem, mode)
+	if args["--output"]:
+		write_solution(args["--output"], solution)
+	if not args["--quiet"]:
+		print_problem(problem)
+		print_solution(solution)
 
 if __name__ == "__main__":
 	main()
