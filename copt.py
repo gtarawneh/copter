@@ -81,124 +81,67 @@ def get_circuit(comp_encoding, cvec):
 			circuit.append(concept)
 	return circuit
 
-def optimize_circuit(decompositions, circuit):
+def optimize(decompositions, circuit, costs={}, mode="unique"):
 
-	print datetime.now()
-
-	print ""
+	# in "unique" mode : a . a == a
+	# in "count" mode  : a . a != a
 
 	s = Optimize()
 
 	concepts = graphs.get_nodes(decompositions)
 
-	comp_encoding = list(concepts)
-	# comp_encoding = ["F", "E", "G", "C", "D", "B", "A"] # complete encoding
-
 	atoms = get_atoms(decompositions)
-	atom_encoding = list(atoms)
-
-	n = len(comp_encoding)
-	m = len(atom_encoding)
 
 	atom_decompositions = get_atom_decompositions(decompositions)
-
 
 	parent_graph = graphs.get_reversed(decompositions)
 
 	ancestor_graph = graphs.get_closure(parent_graph)
 
-	cvec1 = BitVec('cvec1', n) # comp encoding bit vector
-	avec1 = BitVec('avec1', m) # atom encoding bit vector
+	d = {} # dict: concept -> (z3_int, z3_int)
 
-	cvec2 = BitVec('cvec2', n) # comp encoding bit vector
+	# constraints
 
-	# adding decomposition constraints
+	for concept in concepts:
+		a1 = Int(concept + "_1")
+		a2 = Int(concept + "_2")
+		d[concept] = (a1, a2)
+		s.add(a1 >= 0)
+		s.add(a2 >= 0)
+		if mode == "unique":
+			s.add(a1 == (1 if concept in circuit else 0))
+		else:
+			s.add(a1 == sum([(1 if x == concept else 0) for x in circuit]))
 
-	print "atom_encoding :", atom_encoding
-	print "comp_encoding :", comp_encoding
+	for a in atoms:
+		pedigree = list(ancestor_graph[a]) + [a]
+		p1 = [d[ancestor][0] for ancestor in pedigree]
+		p2 = [d[ancestor][1] for ancestor in pedigree]
+		if mode == "unique":
+			s.add(Implies(sum(p1) > 0, sum(p2) > 0))
+			s.add(Implies(sum(p2) > 0, sum(p1) > 0))
+		else:
+			s.add(sum(p1) == sum(p2))
 
-	def count_bits(b):
-		# from:
-		# http://stackoverflow.com/questions/39299015/sum-of-all-the-bits-in-a-bit-vector-of-z3
-		n = b.size() # operand bits
-		m = n - 1 # result bits, n-1 for simplicity, could do ceil(log(n, 2))
-		bits = [Extract(i, i, b) for i in range(n)]
-		bvs = [Concat(BitVecVal(0, m), b) for b in bits]
-		nb = reduce(lambda a, b: a + b, bvs)
-		return nb
+	cost_list = [d[concept][1] * costs.get(concept, 1) for concept in concepts]
 
-	def add_type1_constraint(cvec, avec, cmask_bv, amask_bv):
-		# TODO: more efficient bit extraction, see:
-		# http://stackoverflow.com/questions/32594748/z3py-what-is-the-most-efficient-way-of-constraining-a-bit-in-bitvec
-		# constraint: if concept exists then its atoms exist
-		concept_present = cvec & cmask_bv == cmask_bv
-		all_atoms_present = avec & amask_bv == amask_bv
-		constraint = Implies(concept_present, all_atoms_present)
-		s.add(constraint)
-
-	def add_type2_constraint(cvec, avec, amask_bv, cmask_bv):
-		# constraint: if atoms exist then at least one ancestor exists
-		atom_present = avec & amask_bv == amask_bv
-		one_ancestor_present = (cvec & cmask_bv) != 0
-		constraint = Implies(atom_present, one_ancestor_present)
-		s.add(constraint)
-
-	print "\nConstraints:\n"
-
-	# add type 1 constraints:
-	for ind, concept in enumerate(comp_encoding):
-		cmask_bv = BitVecVal(1 << ind, n)
-		atoms = atom_decompositions[concept]
-		atom_blist = get_blist(atom_encoding, atoms)
-		amask_bv = get_bv(atom_blist)
-		add_type1_constraint(cvec1, avec1, cmask_bv, amask_bv)
-		add_type1_constraint(cvec2, avec1, cmask_bv, amask_bv)
-		print "Concept [%s] (cmask = %2s) |-> atoms %s (amask = %2s)" % \
-			(concept, cmask_bv, repr(atom_blist), amask_bv)
-
-	# add type 2 constraints:
-	for ind, atom in enumerate(atom_encoding):
-		amask_bv = BitVecVal(1 << ind, m)
-		# determine all concepts that contain atom (containers)
-		containers = ancestor_graph[atom]
-		containers.add(atom)
-		container_blist = get_blist(comp_encoding, containers)
-		container_mask_bv = get_bv(container_blist)
-		add_type2_constraint(cvec1, avec1, amask_bv, container_mask_bv)
-		add_type2_constraint(cvec2, avec1, amask_bv, container_mask_bv)
-		print "Atom [%s] (amask = %2s)    |-> container from %s (container_mask = %2s)" % \
-			(atom, amask_bv, repr(container_blist), container_mask_bv)
-
-	s.add(avec1 == avec1) # circuit decompositions are equivalent
-
-	circuit_blist = get_blist(comp_encoding, circuit)
-	circuit_bv = get_bv(circuit_blist)
-
-	s.add(cvec1 == circuit_bv)
-
-	# s.add(count_bits(cvec2) < count_bits(cvec1)) # require a better circuit
-
-	s.minimize(count_bits(cvec2))
-
-	print ""
+	s.minimize(sum(cost_list))
 
 	if s.check() == sat:
-
 		m = s.model()
-
-		circuit1 = get_circuit(comp_encoding, m[cvec1].as_long())
-		circuit2 = get_circuit(comp_encoding, m[cvec2].as_long())
-
-		cost1 = m.evaluate(count_bits(cvec1))
-		cost2 = m.evaluate(count_bits(cvec2))
-
-		print "Input Circuit  (cost = %3s) : %s" % (cost1, circuit1)
-		print "Output Circuit (cost = %3s) : %s" % (cost2, circuit2)
-
-		print "\nBit-vector encodings:\n"
-
-		print "cvec1 = %6s, avec1 = %6s" % (m[cvec1], m[avec1])
-		print "cvec2 = %6s, avec1 = %6s" % (m[cvec2], m[avec1])
+		counts = {c:m[d[c][1]].as_long() for c in concepts}
+		sol_cost_list = [counts[c] * costs.get(c, 1) for c in concepts]
+		solution_cost = sum(sol_cost_list)
+		print "\nSolution :\n"
+		if mode == "unique":
+			present = [c for c in concepts if m[d[c][1]].as_long() > 0]
+			print present
+		else:
+			for concept in concepts:
+				units = m[d[concept][1]].as_long()
+				if units > 0:
+					print concept, "x", units
+		print "\nCost : %d" % solution_cost
 	else:
 		print "unsat"
 
@@ -211,18 +154,22 @@ def main():
 	}
 
 	costs = {
-		"A": 4,
-		"B": 4,
-		"C": 2,
-		"D": 2,
+		"A": 1,
+		"B": 1,
+		"C": 1,
+		"D": 1,
 		"E": 1,
 		"F": 1,
-		"G": 2,
+		"G": 1,
 	}
 
-	circuit = ["A", "G", "D", "B"]
+	circuit = ["A", "B", "A"]
 
-	optimize_circuit(decompositions, circuit)
+	mode = "unique" # unique/count
+
+	print datetime.now()
+
+	optimize(decompositions, circuit, costs, mode)
 
 if __name__ == "__main__":
 	main()
