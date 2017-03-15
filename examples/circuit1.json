@@ -1,0 +1,15 @@
+{
+    "concepts": [
+        "cElement a b c = buffer a c . buffer b c",
+        "handshake b c = buffer b c . inverter c b"
+    ],
+    "costs": {
+        "cElement": 1,
+        "buffer": 1,
+        "handshake": 1
+    },
+    "circuit": [
+        "buffer a c",
+        "buffer b c"
+    ]
+}

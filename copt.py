@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-from z3 import *
-from datetime import datetime
 import graphs
-
+import json
+import plato
+from z3 import *
 
 def get_circuit_blist(atom_decompositions, bit_encoding, circuit):
 	"""
@@ -81,10 +81,14 @@ def get_circuit(comp_encoding, cvec):
 			circuit.append(concept)
 	return circuit
 
-def optimize(decompositions, circuit, costs={}, mode="unique"):
+def optimize(problem, mode="unique"):
 
 	# in "unique" mode : a . a == a
 	# in "count" mode  : a . a != a
+
+	decompositions, circuit = problem["decompositions"], problem["circuit"]
+
+	costs = problem.get("costs", {})
 
 	s = Optimize()
 
@@ -145,31 +149,25 @@ def optimize(decompositions, circuit, costs={}, mode="unique"):
 	else:
 		print "unsat"
 
+def test_plato():
+	file = "examples/circuit1.json"
+	plato_problem = load_problem_file(file)
+	problem = plato.parse(plato_problem)
+	optimize(problem)
+
+def load_problem_file(file):
+	with open(file, "r") as f:
+		problem = json.load(f)
+	return problem
+
+def test_basic():
+	problem = load_problem_file("examples/problem1.json")
+	mode = "unique" # unique/count
+	optimize(problem, mode)
+
 def main():
 
-	decompositions = {
-		"E": ["C", "D"],
-		"F": ["G", "C"],
-		"C": ["A", "B"],
-	}
-
-	costs = {
-		"A": 1,
-		"B": 1,
-		"C": 1,
-		"D": 1,
-		"E": 1,
-		"F": 1,
-		"G": 1,
-	}
-
-	circuit = ["A", "B", "A"]
-
-	mode = "unique" # unique/count
-
-	print datetime.now()
-
-	optimize(decompositions, circuit, costs, mode)
+	test_plato()
 
 if __name__ == "__main__":
 	main()
