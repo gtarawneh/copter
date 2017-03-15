@@ -1,0 +1,5 @@
+*.pyc
+env1
+project.sublime-workspace
+*.log
+Makefile
