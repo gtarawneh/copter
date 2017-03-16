@@ -1,0 +1,32 @@
+{
+    "concepts": [
+        "outputRise a b c = cause_rr a c . cause_rr b c",
+        "inputFall a b c = cause_rf c a . cause_rf c b",
+        "outputFall a b c = cause_ff a c . cause_ff b c",
+        "inputRise a b c = cause_fr c a . cause_fr c b",
+        "cElement a b c = buffer a c . buffer b c",
+        "inverter a b  = cause_rf a b . cause_fr a b",
+        "buffer a b = cause_rr a b . cause_ff a b",
+        "handshake b c = buffer b c . inverter c b"
+    ],
+    "costs": {
+        "cause_rr": 20,
+        "cause_ff": 20,
+        "cause_rf": 20,
+        "cause_fr": 20,
+        "outputRise": 10,
+        "inputFall": 10,
+        "outputFall": 10,
+        "inputRise": 10,
+        "buffer": 5,
+        "inverter": 5,
+        "handshake": 2,
+        "cElement": 1
+    },
+    "circuit": [
+        "outputRise a b c",
+        "inputFall a b c",
+        "outputFall a b c",
+        "inputRise a b c"
+    ]
+}

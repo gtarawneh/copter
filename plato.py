@@ -56,7 +56,7 @@ def parse(plato_problem):
 		for comb in itertools.permutations(signals, child_count):
 			key = " ".join([parent] + list(comb))
 			decomps[key] = []
-			costs[key] = cost_template[parent]
+			costs[key] = cost_template.get(parent, 1)
 			for c in cd["children"]:
 				name, inds = c[0], c[1:]
 				args = [comb[ind] for ind in inds]
