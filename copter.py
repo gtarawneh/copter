@@ -6,11 +6,11 @@ import plato
 from z3 import *
 from docopt import docopt
 
-usage = """ copt.py
+usage = """Composability Optimizer (Copter)
 
 Usage:
-  copt.py [--plato] [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
-  copt.py --version
+  copter.py [--plato] [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copter.py --version
 
 Options:
   -p --plato          Load problem file in Plato format.
@@ -199,7 +199,7 @@ def print_problem(problem):
 	print ""
 
 def main():
-	args = docopt(usage, version="copt.py 0.1")
+	args = docopt(usage, version="Composability Optimizer (Copter) 0.1")
 	content = load_problem_file(args["<problem.json>"])
 	problem = plato.parse(content) if args["--plato"] else content
 	mode = args.get("<m>", "unique")

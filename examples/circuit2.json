@@ -24,9 +24,9 @@
         "cElement": 1
     },
     "circuit": [
-        "outputRise a b c",
-        "inputFall a b c",
-        "outputFall a b c",
-        "inputRise a b c"
+        "outputRise x y z",
+        "inputFall x y z",
+        "outputFall x y z",
+        "inputRise x y z"
     ]
 }
