@@ -2,20 +2,21 @@
 
 ### Installation
 
-To setup the tool, following the instructions below:
+Follow the instructions below to install and setup Copter:
 
-1. Install [Microsoft Z3](https://github.com/Z3Prover/z3/releases) (version 4.5.0 or higher)
+1. Install [Microsoft Z3](https://github.com/Z3Prover/z3/releases) (v4.5.0 or higher)
 2. Install the Python module `docopt` (`pip install docopt`)
-3. Add the path to Z3's Python module to the environmental variable `PYTHONPATH`:
+3. Add Z3's Python module path to the environmental variable `PYTHONPATH`:
 
 `export PYTHONPATH=$PYTHONPATH:/z3-4.5.0-x64-ubuntu-14.04/bin/python`
+
+(adjust appropriately for your system)
 
 Notes:
 
 1. `pip` is package manager for Python which may not be installed by default
-on your system (run `pip -V` to check if `pip` is installed). If not then
-follow [these instructions](https://pip.pypa.io/en/stable/installing/) to
-install `pip`.
+on your system. If `pip` is not installed (run `pip -V` to check) then follow
+[these instructions](https://pip.pypa.io/en/stable/installing/).
 
 ### Command Line Interface
 
@@ -23,11 +24,10 @@ install `pip`.
 Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--plato] [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copter.py [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
   copter.py --version
 
 Options:
-  -p --plato          Load problem file in Plato format.
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
   -q --quiet          Suppress output.
@@ -73,22 +73,23 @@ example:
     ]
 }
 ```
+
 This example is included in the `examples` directory. To run it, execute:
 
-`./copter.py --plato examples/circuit2.json`
+`./copter.py examples/circuit2.json`
 
-The tool will now produce:
+and the tool will produce the following output:
 
 ```
-Circuit Elements           : 4
+System Modules             : 4
 Unique Cost Elements       : 48
-Unique Decompositions      : 48
+Unique Rules               : 48
 
 Solution:
 
-["handshake a c", "handshake b c"]
+["handshake x z", "handshake y z"]
 
 Cost : 4
 ```
 
-Note: the examples above uses _parameterized rules_.
+Note: the example above uses _parameterized rules_.

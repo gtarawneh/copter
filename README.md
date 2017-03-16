@@ -25,17 +25,17 @@ composable systems can be reduced to collections of atoms.
 
 Given a specification of a composable system with large numbers of atoms and
 rules, it is sometimes useful to find alternative specifications that are
-shorter, more verbose or free from (or inclusive of) certain modules. For
+shorter, less/more verbose or free from (or inclusive of) certain modules. For
 example, one may be interested in finding a simpler specification equivalent
 to:
 
 `something = front_wheel . rear_wheel . saddle . post`
 
-which would be `something = wheels . seat`, or another specification which
-less verbose but still contains the module `saddle` such as: `something =
+which would be `something = wheels . seat`, or another specification which is
+less verbose but still contains the module `saddle` such as `something =
 wheels . saddle . post`.
 
-These alternative specifications can be found by Copter. Copter is an
+Alternative specifications such as these can be found by Copter. Copter is an
 optimization tool for composable system specifications based on
 [Z3](https://github.com/Z3Prover/z3). The tool is developed primarily to
 optimize [Concepts](https://github.com/tuura/plato) (a DSL for expressing
