@@ -1,5 +1,5 @@
 {
-    "concepts": [
+    "rules": [
         "cElement a b c = buffer a c . buffer b c",
         "handshake b c = buffer b c . inverter c b"
     ],
@@ -8,7 +8,7 @@
         "buffer": 1,
         "handshake": 1
     },
-    "circuit": [
+    "system": [
         "buffer a c",
         "buffer b c"
     ]

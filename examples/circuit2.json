@@ -1,5 +1,5 @@
 {
-    "concepts": [
+    "rules": [
         "outputRise a b c = cause_rr a c . cause_rr b c",
         "inputFall a b c = cause_rf c a . cause_rf c b",
         "outputFall a b c = cause_ff a c . cause_ff b c",
@@ -23,7 +23,7 @@
         "handshake": 2,
         "cElement": 1
     },
-    "circuit": [
+    "system": [
         "outputRise x y z",
         "inputFall x y z",
         "outputFall x y z",

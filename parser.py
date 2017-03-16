@@ -1,4 +1,3 @@
-import json
 import itertools
 
 def split_list(mylist, separators):
@@ -14,7 +13,7 @@ def split_list(mylist, separators):
 	return sublists
 
 def parse_definitions(definitions):
-	concept_defs = {}
+	module_defs = {}
 	for line in definitions:
 		words = line.split()
 		try:
@@ -28,43 +27,43 @@ def parse_definitions(definitions):
 		result["quantifiers"] = len(head) - 1
 		result["children"] = []
 		head_quantifiers = head[1:]
-		for concept in body:
-			name, signals = concept[0], concept[1:]
+		for module in body:
+			name, signals = module[0], module[1:]
 			inds = [head_quantifiers.index(signal) for signal in signals]
 			result["children"].append([name] + inds)
-		concept_defs[head_name] = result
-	return concept_defs
+		module_defs[head_name] = result
+	return module_defs
 
-def get_circuit_signals(circuit):
+def get_signals(system):
 	signals = set()
-	for item in circuit:
+	for item in system:
 		words = item.split()
 		for signal in words[1:]:
 			signals.add(signal)
 	return list(signals)
 
 def parse(plato_problem):
-	definitions = plato_problem["concepts"]
+	definitions = plato_problem["rules"]
 	cost_template = plato_problem.get("costs", {})
-	circuit = plato_problem["circuit"]
-	signals = get_circuit_signals(circuit)
-	concept_defs = parse_definitions(definitions)
-	decomps, costs = {}, {}
-	for parent in concept_defs.keys():
-		cd = concept_defs[parent]
+	system = plato_problem["system"]
+	signals = get_signals(system)
+	module_defs = parse_definitions(definitions)
+	rules, costs = {}, {}
+	for parent in module_defs.keys():
+		cd = module_defs[parent]
 		child_count = cd["quantifiers"]
 		for comb in itertools.permutations(signals, child_count):
 			key = " ".join([parent] + list(comb))
-			decomps[key] = []
+			rules[key] = []
 			costs[key] = cost_template.get(parent, 1)
 			for c in cd["children"]:
 				name, inds = c[0], c[1:]
 				args = [comb[ind] for ind in inds]
 				val = " ".join([name] + args)
-				decomps[key].append(val)
+				rules[key].append(val)
 	problem = {
-		"decompositions": decomps,
+		"rules": rules,
 		"costs": costs,
-		"circuit": circuit
+		"system": system
 	}
 	return problem

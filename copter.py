@@ -2,51 +2,31 @@
 
 import graphs
 import json
-import plato
+import parser
+import docopt
 from z3 import *
-from docopt import docopt
 
 usage = """Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--plato] [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copter.py [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
   copter.py --version
 
 Options:
-  -p --plato          Load problem file in Plato format.
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
   -q --quiet          Suppress output.
 
 """
 
-def get_circuit_blist(atom_decompositions, bit_encoding, circuit):
+def get_atom_rules(rules):
 	"""
-	Return a bit list indicating whether each atom in `bit_encoding` is
-	present in the circuit.
-
-	`circuit` is a list of concepts.
-	"""
-	circuit_atoms = set()
-	for c in circuit:
-		circuit_atoms = circuit_atoms.union(atom_decompositions.get(c, []))
-	return get_blist(bit_encoding, atoms)
-
-def get_blist(bit_encoding, atoms):
-	"""
-	Return a bit list indicating whether each atom in `bit_encoding` is
-	present in `atoms`
-	"""
-	return [(1 if b in atoms else 0) for b in bit_encoding]
-
-def get_atom_decompositions(decompositions):
-	"""
-	Return a dict: concept -> list of constituent atoms.
+	Return a dict: module -> list of constituent atoms.
 	"""
 
-	atoms = get_atoms(decompositions)
+	atoms = get_atoms(rules)
 
-	def get_concept_atoms(root):
+	def get_module_atoms(root):
 		"""
 		Return a list of all atoms in the subtree `root`.
 		"""
@@ -55,82 +35,63 @@ def get_atom_decompositions(decompositions):
 		while to_visit:
 			next_to_visit = set()
 			for node in to_visit:
-				for child in decompositions.get(node, []):
+				for child in rules.get(node, []):
 					next_to_visit.add(child)
 			next_to_visit.difference(visited)
 			to_visit = next_to_visit
 			visited = visited.union(next_to_visit)
 		return list(visited.intersection(atoms))
 
-	concepts = graphs.get_nodes(decompositions)
-	atom_decompositions = {c:get_concept_atoms(c) for c in concepts}
-	return atom_decompositions
+	modules = graphs.get_nodes(rules)
+	atom_rules = {c:get_module_atoms(c) for c in modules}
+	return atom_rules
 
-def get_atoms(decompositions):
+def get_atoms(rules):
 	"""
-	Return atom concepts.
+	Return atom modules.
 
-	Atoms are concepts that cannot be decomposed.
+	Atoms are modules that cannot be decomposed.
 	"""
-	concepts = graphs.get_nodes(decompositions)
-	non_atoms = decompositions.keys()
-	atoms = set(concepts).difference(non_atoms)
+	modules = graphs.get_nodes(rules)
+	non_atoms = rules.keys()
+	atoms = set(modules).difference(non_atoms)
 	return list(atoms)
-
-def get_bv(blist):
-	"""
-	Return a z3 BitVecVal representation of blist.
-	"""
-	m = len(blist)
-	amask = 0 # atom mask
-	for ind2, bit in enumerate(blist):
-		amask += bit << ind2
-	return BitVecVal(amask, m)
-
-def get_circuit(comp_encoding, cvec):
-	n = len(comp_encoding)
-	circuit = []
-	for ind, concept in enumerate(comp_encoding):
-		mask = 1 << ind
-		if cvec & mask:
-			circuit.append(concept)
-	return circuit
 
 def optimize(problem, mode="unique"):
 
 	# in "unique" mode : a . a == a
 	# in "count" mode  : a . a != a
 
-	decompositions, circuit = problem["decompositions"], problem["circuit"]
+	rules, system = problem["rules"], problem["system"]
 
 	costs = problem.get("costs", {})
 
 	s = Optimize()
 
-	concepts = graphs.get_nodes(decompositions)
+	modules = graphs.get_nodes(rules)
 
-	atoms = get_atoms(decompositions)
+	atoms = get_atoms(rules)
 
-	atom_decompositions = get_atom_decompositions(decompositions)
+	atom_rules = get_atom_rules(rules)
 
-	parent_graph = graphs.get_reversed(decompositions)
+	parent_graph = graphs.get_reversed(rules)
 
 	ancestor_graph = graphs.get_closure(parent_graph)
 
-	d = {} # dict: concept -> (z3_int, z3_int)
+	d = {} # dict: module -> (z3_int, z3_int)
 
 	# constraints
 
-	for concept in concepts:
-		a1 = Int(concept + "_1")
-		a2 = Int(concept + "_2")
-		d[concept] = (a1, a2)
+	for module in modules:
+		a1 = Int(module + "_1")
+		a2 = Int(module + "_2")
+		d[module] = (a1, a2)
 		s.add(a1 >= 0)
 		s.add(a2 >= 0)
 		if mode == "unique":
-			s.add(a1 == (1 if concept in circuit else 0))
+			s.add(a1 == (1 if module in system else 0))
 		else:
-			s.add(a1 == sum([(1 if x == concept else 0) for x in circuit]))
+			s.add(a1 == sum([(1 if x == module else 0) for x in system]))
 
 	for a in atoms:
 		pedigree = list(ancestor_graph[a]) + [a]
@@ -142,25 +103,25 @@ def optimize(problem, mode="unique"):
 		else:
 			s.add(sum(p1) == sum(p2))
 
-	cost_list = [d[concept][1] * costs.get(concept, 1) for concept in concepts]
+	cost_list = [d[module][1] * costs.get(module, 1) for module in modules]
 
 	s.minimize(sum(cost_list))
 
 	if s.check() == sat:
 		m = s.model()
-		counts = {c:m[d[c][1]].as_long() for c in concepts}
-		sol_cost_list = [counts[c] * costs.get(c, 1) for c in concepts]
+		counts = {c:m[d[c][1]].as_long() for c in modules}
+		sol_cost_list = [counts[c] * costs.get(c, 1) for c in modules]
 		solution = {
 			"cost": sum(sol_cost_list)
 		}
 		if mode == "unique":
-			solution["circuit"] = [c for c in concepts if m[d[c][1]].as_long() > 0]
+			solution["system"] = [c for c in modules if m[d[c][1]].as_long() > 0]
 		else:
-			solution["circuit"] = []
-			for concept in concepts:
-				units = m[d[concept][1]].as_long()
+			solution["system"] = []
+			for module in modules:
+				units = m[d[module][1]].as_long()
 				if units > 0:
-					solution["circuit"] += [concept] * units
+					solution["system"] += [module] * units
 		return solution
 	else:
 		print None
@@ -172,7 +133,7 @@ def print_solution(solution):
 		lines = [
 			"Solution:",
 			"",
-			json.dumps(solution["circuit"]),
+			json.dumps(solution["system"]),
 			"",
 			"Cost : %d" % solution["cost"]
 		]
@@ -183,25 +144,24 @@ def write_solution(file, solution):
 	with open(file, "w") as f:
 		json.dump(solution, f, indent=4)
 
-def load_problem_file(file):
+def load_problem(file):
 	with open(file, "r") as f:
-		problem = json.load(f)
-	return problem
+		content = json.load(f)
+	return parser.parse(content)
 
 def print_problem(problem):
 	stats = [
-		("Circuit Elements", len(problem["circuit"])),
+		("System Modules", len(problem["system"])),
 		("Unique Cost Elements", len(problem["costs"])),
-		("Unique Decompositions", len(problem["decompositions"]))
+		("Unique Rules", len(problem["rules"]))
 	]
 	for tup in stats:
 		print "%-26s : %d" % tup
 	print ""
 
 def main():
-	args = docopt(usage, version="Composability Optimizer (Copter) 0.1")
-	content = load_problem_file(args["<problem.json>"])
-	problem = plato.parse(content) if args["--plato"] else content
+	args = docopt.docopt(usage, version="Composability Optimizer (Copter) 0.1")
+	problem = load_problem(args["<problem.json>"])
 	mode = args.get("<m>", "unique")
 	if mode not in ["unique", "count"]:
 		raise Exception("Invalid mode: %s" % mode)
