@@ -34,12 +34,6 @@ def parse_definitions(definitions):
 		module_defs[head_name] = result
 	return module_defs
 
-def parse_system(system):
-	if type(system) is list:
-		return system
-	else:
-		return [module.strip() for module in system.split(".")]
-
 def get_signals(system):
 	signals = set()
 	for item in system:
@@ -48,13 +42,14 @@ def get_signals(system):
 			signals.add(signal)
 	return list(signals)
 
-def parse(plato_problem):
-	definitions = plato_problem["rules"]
-	cost_template = plato_problem.get("costs", {})
-	system = parse_system(plato_problem["system"])
+def parse(problem):
+	definitions = problem["rules"]
+	cost_template = problem.get("costs", {})
+	system = problem["system"]
 	signals = get_signals(system)
 	module_defs = parse_definitions(definitions)
 	rules, costs = {}, {}
+	cost_undef_mods = set() # modules with undefined costs
 	for parent in module_defs.keys():
 		cd = module_defs[parent]
 		child_count = cd["quantifiers"]
@@ -62,6 +57,8 @@ def parse(plato_problem):
 			key = " ".join([parent] + list(comb))
 			rules[key] = []
 			costs[key] = cost_template.get(parent, 1)
+			if parent not in cost_template:
+				cost_undef_mods.add(parent)
 			for c in cd["children"]:
 				name, inds = c[0], c[1:]
 				args = [comb[ind] for ind in inds]
@@ -70,6 +67,11 @@ def parse(plato_problem):
 	problem = {
 		"rules": rules,
 		"costs": costs,
-		"system": system
+		"system": system,
+		"source": {
+			"rules": definitions,
+			"costs": cost_template,
+			"cost_undef_mods": list(cost_undef_mods)
+		}
 	}
 	return problem

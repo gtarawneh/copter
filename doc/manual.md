@@ -24,12 +24,13 @@ on your system. If `pip` is not installed (run `pip -V` to check) then follow
 Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print] <problem.json>...
   copter.py --version
 
 Options:
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
+  -p --print          Print problem (rules, costs and system).
   -q --quiet          Suppress output.
 ```
 
@@ -106,3 +107,9 @@ The `costs` dictionary is optional. If `costs` is incomplete or not included
 in the input file then any unknown module costs will be assumed `1` by
 default. The default behavior of `Copter` is therefore to minimize the _number
 of modules_ in the specification.
+
+Additionally, a dictionary file with override module costs can be load using
+the `--costs` switch. This provides a mechanism to specifyu
+
+is useful for users wishing to reuse several cost
+profiles across a number of problems

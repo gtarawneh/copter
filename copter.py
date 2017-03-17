@@ -9,12 +9,13 @@ from z3 import *
 usage = """Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--mode=<m>] [--output=<file>] [--quiet] <problem.json>
+  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print] <problem.json>...
   copter.py --version
 
 Options:
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
+  -p --print          Print problem (rules, costs and system).
   -q --quiet          Suppress output.
 
 """
@@ -132,11 +133,9 @@ def print_solution(solution):
 		print "unsat"
 	else:
 		lines = [
-			"Solution:",
+			"Solution (cost = %d):" % solution["cost"],
 			"",
-			json.dumps(solution["system"]),
-			"",
-			"Cost : %d" % solution["cost"]
+			" . ".join(solution["system"]),
 		]
 		for line in lines:
 			print line
@@ -145,19 +144,63 @@ def write_solution(file, solution):
 	with open(file, "w") as f:
 		json.dump(solution, f, indent=4)
 
-def load_problem(file):
-	with open(file, "r") as f:
-		content = json.load(f)
-	return parser.parse(content)
+def load_problem(files):
+	"""
+	Load problem by concatenating `rules`, `costs` and `system` entries in a
+	list of files.
+
+    If conflicting `costs` entries are present then those in later files
+    take priority.
+	"""
+	all_content = {
+		"rules" : [],
+		"costs": {},
+		"system": []
+	}
+	for file in files:
+		with open(file, "r") as f:
+			content = json.load(f)
+		if "rules" in content:
+			all_content["rules"] += content["rules"]
+		if "system" in content:
+			system = content["system"]
+			if type(system) is not list:
+				# Assume system is in string format and convert it to a list
+				system = [module.strip() for module in system.split(".")]
+			all_content["system"] += system
+		if "costs" in content:
+			for module, cost in content["costs"].iteritems():
+				all_content["costs"][module] = cost
+	return parser.parse(all_content)
 
 def print_problem(problem):
+	print "Rules:"
+	for r in problem["source"]["rules"]:
+		parts = r.split("=")
+		print "    - %-24s = %s" % (parts[0], ". ".join(parts[1:]))
+	print ""
+	print "Costs:"
+	for module, cost in problem["source"]["costs"].iteritems():
+		print "    - %-24s = %d" % (module, cost)
+	for module in problem["source"]["cost_undef_mods"]:
+		print "    - %-24s = 1   (default cost)" % module
+	print ""
+	print "System:"
+	for module in problem["system"]:
+		print "    - %-24s" % module
+	print ""
+
+def print_problem_stats(problem):
 	stats = [
 		("System Modules", len(problem["system"])),
-		("Unique Cost Elements", len(problem["costs"])),
-		("Unique Rules", len(problem["rules"]))
+		("Defined Costs", len(problem["source"]["costs"])),
+		("Defined Rules", len(problem["source"]["rules"])),
+		("Expanded Costs", len(problem["costs"])),
+		("Expanded Rules", len(problem["rules"]))
 	]
+	print "Problem Statistics:"
 	for tup in stats:
-		print "%-26s : %d" % tup
+		print "    - %-26s : %d" % tup
 	print ""
 
 def main():
@@ -166,11 +209,13 @@ def main():
 	mode = args.get("<m>", "unique")
 	if mode not in ["unique", "count"]:
 		raise Exception("Invalid mode: %s" % mode)
+	if args["--print"]:
+		print_problem(problem)
 	solution = optimize(problem, mode)
 	if args["--output"]:
 		write_solution(args["--output"], solution)
 	if not args["--quiet"]:
-		print_problem(problem)
+		print_problem_stats(problem)
 		print_solution(solution)
 
 if __name__ == "__main__":
