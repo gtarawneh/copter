@@ -34,6 +34,12 @@ def parse_definitions(definitions):
 		module_defs[head_name] = result
 	return module_defs
 
+def parse_system(system):
+	if type(system) is list:
+		return system
+	else:
+		return [module.strip() for module in system.split(".")]
+
 def get_signals(system):
 	signals = set()
 	for item in system:
@@ -45,7 +51,7 @@ def get_signals(system):
 def parse(plato_problem):
 	definitions = plato_problem["rules"]
 	cost_template = plato_problem.get("costs", {})
-	system = plato_problem["system"]
+	system = parse_system(plato_problem["system"])
 	signals = get_signals(system)
 	module_defs = parse_definitions(definitions)
 	rules, costs = {}, {}

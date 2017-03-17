@@ -35,13 +35,12 @@ Options:
 
 ### Example Usage
 
-The input is a JSON file containing a list of rules (concepts), a dictionary
-of module costs and the system (circuit) specification to optimize. For
-example:
+The input is a JSON file containing a list of rules, a dictionary of module
+costs and the system specification to optimize. For example:
 
 ```JSON
 {
-    "concepts": [
+    "rules": [
         "outputRise a b c = cause_rr a c . cause_rr b c",
         "inputFall a b c = cause_rf c a . cause_rf c b",
         "outputFall a b c = cause_ff a c . cause_ff b c",
@@ -65,7 +64,7 @@ example:
         "handshake": 2,
         "cElement": 1
     },
-    "circuit": [
+    "system": [
         "outputRise x y z",
         "inputFall x y z",
         "outputFall x y z",
@@ -78,7 +77,7 @@ This example is included in the `examples` directory. To run it, execute:
 
 `./copter.py examples/circuit2.json`
 
-and the tool will produce the following output:
+and Copter will produce the following output:
 
 ```
 System Modules             : 4
@@ -93,3 +92,17 @@ Cost : 4
 ```
 
 Note: the example above uses _parameterized rules_.
+
+### Input Format
+
+The input file must be a JSON dictionary containing the keys `rules` and
+`system`. `rules` is a list of compositions rule strings and `system` is a
+composable system specification in one of the formats:
+
+* `"module1 param1 param2 . module2 param1 param2"`
+* `["module1 param1 param2", "module2 param1 param2"]`
+
+The `costs` dictionary is optional. If `costs` is incomplete or not included
+in the input file then any unknown module costs will be assumed `1` by
+default. The default behavior of `Copter` is therefore to minimize the _number
+of modules_ in the specification.
