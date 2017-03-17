@@ -19,33 +19,6 @@ Options:
 
 """
 
-def get_atom_rules(rules):
-	"""
-	Return a dict: module -> list of constituent atoms.
-	"""
-
-	atoms = get_atoms(rules)
-
-	def get_module_atoms(root):
-		"""
-		Return a list of all atoms in the subtree `root`.
-		"""
-		to_visit = [root]
-		visited = set([root])
-		while to_visit:
-			next_to_visit = set()
-			for node in to_visit:
-				for child in rules.get(node, []):
-					next_to_visit.add(child)
-			next_to_visit.difference(visited)
-			to_visit = next_to_visit
-			visited = visited.union(next_to_visit)
-		return list(visited.intersection(atoms))
-
-	modules = graphs.get_nodes(rules)
-	atom_rules = {c:get_module_atoms(c) for c in modules}
-	return atom_rules
-
 def get_atoms(rules):
 	"""
 	Return atom modules.
@@ -97,13 +70,17 @@ def optimize(problem, mode="unique"):
 
 	atoms = get_atoms(rules)
 
-	atom_rules = get_atom_rules(rules)
-
 	parent_graph = graphs.get_reversed(rules)
 
 	ancestor_graph = graphs.get_closure(parent_graph)
 
 	d = {} # dict: module -> (z3_int, z3_int)
+
+	iff = Function('iff', BoolSort(), BoolSort(), BoolSort())
+	s.add(iff(False, False) == True)
+	s.add(iff(False, True)  == False)
+	s.add(iff(True,  False) == False)
+	s.add(iff(True,  True)  == True)
 
 	# constraints
 
@@ -123,8 +100,7 @@ def optimize(problem, mode="unique"):
 		p1 = [d[ancestor][0] for ancestor in pedigree]
 		p2 = [d[ancestor][1] for ancestor in pedigree]
 		if mode == "unique":
-			s.add(Implies(sum(p1) > 0, sum(p2) > 0))
-			s.add(Implies(sum(p2) > 0, sum(p1) > 0))
+			s.add(iff(sum(p1) > 0, sum(p2) > 0))
 		else:
 			s.add(sum(p1) == sum(p2))
 
