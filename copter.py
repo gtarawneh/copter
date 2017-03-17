@@ -57,10 +57,35 @@ def get_atoms(rules):
 	atoms = set(modules).difference(non_atoms)
 	return list(atoms)
 
+def prune_problem(problem):
+	"""
+	Remove rules that cannot be applied to the system.
+	"""
+	system = problem["system"]
+	rules = problem["rules"]
+	# compute closure and reverse closure
+	rev_rules = graphs.get_reversed(rules)
+	closure = graphs.get_closure(rules)
+	rev_closure = graphs.get_closure(rev_rules)
+	# compute lineage and family
+	lineage = set() # ancestors and descendents of modules in system
+	lineage.update(system)
+	for module in system:
+		lineage.update(closure.get(module, []))
+		lineage.update(rev_closure.get(module, []))
+	family = set() # lineage + ancestors and descendents of all members
+	for module in lineage:
+		family.update(closure.get(module, []))
+		family.update(rev_closure.get(module, []))
+	# keep rules of family members, remove everything else
+	problem["rules"] = {k:v for k,v in rules.iteritems() if k in family}
+
 def optimize(problem, mode="unique"):
 
 	# in "unique" mode : a . a == a
 	# in "count" mode  : a . a != a
+
+	prune_problem(problem)
 
 	rules, system = problem["rules"], problem["system"]
 
