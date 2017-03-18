@@ -213,7 +213,7 @@ def main():
 	args = docopt.docopt(usage, version="Composability Optimizer (Copter) 0.1")
 	problem = load_problem(args["<problem.json>"])
 	if problem:
-		mode = args.get("<m>", "unique")
+		mode = args["--mode"]
 		if mode not in ["unique", "count"]:
 			raise Exception("Invalid mode: %s" % mode)
 		if args["--print"]:
