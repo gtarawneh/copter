@@ -158,8 +158,14 @@ def load_problem(files):
 		"system": []
 	}
 	for file in files:
-		with open(file, "r") as f:
-			content = json.load(f)
+		try:
+			with open(file, "r") as f:
+				content = json.load(f)
+		except ValueError as e:
+			print "Could not load file", file
+			print ""
+			print e
+			return None
 		if "rules" in content:
 			all_content["rules"] += content["rules"]
 		if "system" in content:
@@ -206,17 +212,18 @@ def print_problem_stats(problem):
 def main():
 	args = docopt.docopt(usage, version="Composability Optimizer (Copter) 0.1")
 	problem = load_problem(args["<problem.json>"])
-	mode = args.get("<m>", "unique")
-	if mode not in ["unique", "count"]:
-		raise Exception("Invalid mode: %s" % mode)
-	if args["--print"]:
-		print_problem(problem)
-	solution = optimize(problem, mode)
-	if args["--output"]:
-		write_solution(args["--output"], solution)
-	if not args["--quiet"]:
-		print_problem_stats(problem)
-		print_solution(solution)
+	if problem:
+		mode = args.get("<m>", "unique")
+		if mode not in ["unique", "count"]:
+			raise Exception("Invalid mode: %s" % mode)
+		if args["--print"]:
+			print_problem(problem)
+		solution = optimize(problem, mode)
+		if args["--output"]:
+			write_solution(args["--output"], solution)
+		if not args["--quiet"]:
+			print_problem_stats(problem)
+			print_solution(solution)
 
 if __name__ == "__main__":
 	main()
