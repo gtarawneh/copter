@@ -9,12 +9,14 @@ from z3 import *
 usage = """Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print] <problem.json>...
+  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print]
+            [--costs=<list>] <problem.json>...
   copter.py --version
 
 Options:
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
+  -c --costs=<list>   Override costs (<list> is mod1:cost1,mod2:cost2 ...).
   -p --print          Print problem (rules, costs and system).
   -q --quiet          Suppress output.
 
@@ -144,19 +146,23 @@ def write_solution(file, solution):
 	with open(file, "w") as f:
 		json.dump(solution, f, indent=4)
 
-def load_problem(files):
+def load_problem(files, override_costs=[]):
 	"""
 	Load problem by concatenating `rules`, `costs` and `system` entries in a
 	list of files.
 
-    If conflicting `costs` entries are present then those in later files
-    take priority.
+	If conflicting `costs` entries are present then those in later files
+	take priority.
+
+	`override_costs` is a string in the form 'mod1:cost1,mod2:cost2...'].
+	Cost definitions in `override_costs` take precedence over those in files.
 	"""
 	all_content = {
 		"rules" : [],
 		"costs": {},
 		"system": []
 	}
+	# load file content
 	for file in files:
 		try:
 			with open(file, "r") as f:
@@ -177,6 +183,10 @@ def load_problem(files):
 		if "costs" in content:
 			for module, cost in content["costs"].iteritems():
 				all_content["costs"][module] = cost
+	# process cost overrides
+	for item in override_costs.split(","):
+		module, cost_str = item.split(":")
+		all_content["costs"][module] = int(cost_str)
 	return parser.parse(all_content)
 
 def print_problem(problem):
@@ -211,7 +221,7 @@ def print_problem_stats(problem):
 
 def main():
 	args = docopt.docopt(usage, version="Composability Optimizer (Copter) 0.1")
-	problem = load_problem(args["<problem.json>"])
+	problem = load_problem(args["<problem.json>"], args["--costs"])
 	if problem:
 		mode = args["--mode"]
 		if mode not in ["unique", "count"]:
