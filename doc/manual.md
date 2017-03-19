@@ -24,12 +24,14 @@ on your system. If `pip` is not installed (run `pip -V` to check) then follow
 Composability Optimizer (Copter)
 
 Usage:
-  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print] <problem.json>...
+  copter.py [--mode=<m>] [--output=<file>] [--quiet|--print]
+            [--costs=<list>] <problem.json>...
   copter.py --version
 
 Options:
   -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
   -o --output=<file>  Write solution to json file.
+  -c --costs=<list>   Override costs (<list> is mod1:cost1,mod2:cost2 ...).
   -p --print          Print problem (rules, costs and system).
   -q --quiet          Suppress output.
 ```
@@ -174,3 +176,15 @@ Solution (cost = 4):
 
 handshake x z . handshake y z
 ```
+
+#### Overriding Costs
+
+For scripting purposes, Copter enables users to supply cost definitions using
+the switch `--cost`. For example:
+
+```
+./copter.py --costs=handshake:50,buffer:10 examples/circuit2.json base_costs.json
+```
+
+Costs passed as arguments to `--costs` take highest precedence and will
+override any that are loaded from files.
