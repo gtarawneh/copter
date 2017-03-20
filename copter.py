@@ -168,8 +168,7 @@ def load_problem(files, override_costs):
 			with open(file, "r") as f:
 				content = json.load(f)
 		except ValueError as e:
-			print "Could not load file", file
-			print ""
+			print "Could not load file %s\n" % file
 			print e
 			return None
 		if "rules" in content:
@@ -184,10 +183,14 @@ def load_problem(files, override_costs):
 			for module, cost in content["costs"].iteritems():
 				all_content["costs"][module] = cost
 	# process cost overrides
-	if override_costs:
-		for item in override_costs.split(","):
-			module, cost_str = item.split(":")
-			all_content["costs"][module] = int(cost_str)
+	try:
+		if override_costs:
+			for item in override_costs.split(","):
+				module, cost_str = item.split(":")
+				all_content["costs"][module] = int(cost_str)
+	except ValueError as e:
+		print "Invalid --costs argument, correct form is --costs=mod1:cost1,mod2:cost,...\n"
+		raise(e)
 	return parser.parse(all_content)
 
 def print_problem(problem):
@@ -195,14 +198,12 @@ def print_problem(problem):
 	for r in problem["source"]["rules"]:
 		parts = r.split("=")
 		print "    - %-24s = %s" % (parts[0], ". ".join(parts[1:]))
-	print ""
-	print "Costs:"
+	print "\nCosts:"
 	for module, cost in problem["source"]["costs"].iteritems():
 		print "    - %-24s = %d" % (module, cost)
 	for module in problem["source"]["cost_undef_mods"]:
 		print "    - %-24s = 1   (default cost)" % module
-	print ""
-	print "System:"
+	print "\nSystem:"
 	for module in problem["system"]:
 		print "    - %-24s" % module
 	print ""
@@ -222,7 +223,11 @@ def print_problem_stats(problem):
 
 def main():
 	args = docopt.docopt(usage, version="Composability Optimizer (Copter) 0.1")
-	problem = load_problem(args["<problem.json>"], args["--costs"])
+	try:
+		problem = load_problem(args["<problem.json>"], args["--costs"])
+	except Exception as e:
+		print "Encountered error while loading problem\n"
+		raise(e)
 	if problem:
 		mode = args["--mode"]
 		if mode not in ["unique", "count"]:
