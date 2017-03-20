@@ -31,6 +31,12 @@ def parse_definitions(definitions):
 			name, signals = module[0], module[1:]
 			inds = [head_quantifiers.index(signal) for signal in signals]
 			result["children"].append([name] + inds)
+			# add child to module_defs
+			if name not in module_defs:
+				module_defs[name] = {
+					"children": [],
+					"quantifiers": len(signals)
+				}
 		module_defs[head_name] = result
 	return module_defs
 
@@ -55,15 +61,16 @@ def parse(problem):
 		child_count = cd["quantifiers"]
 		for comb in itertools.permutations(signals, child_count):
 			key = " ".join([parent] + list(comb))
-			rules[key] = []
 			costs[key] = cost_template.get(parent, 1)
 			if parent not in cost_template:
 				cost_undef_mods.add(parent)
-			for c in cd["children"]:
-				name, inds = c[0], c[1:]
-				args = [comb[ind] for ind in inds]
-				val = " ".join([name] + args)
-				rules[key].append(val)
+			if cd["children"]:
+				rules[key] = []
+				for c in cd["children"]:
+					name, inds = c[0], c[1:]
+					args = [comb[ind] for ind in inds]
+					val = " ".join([name] + args)
+					rules[key].append(val)
 	problem = {
 		"rules": rules,
 		"costs": costs,

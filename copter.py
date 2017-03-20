@@ -146,7 +146,7 @@ def write_solution(file, solution):
 	with open(file, "w") as f:
 		json.dump(solution, f, indent=4)
 
-def load_problem(files, override_costs=[]):
+def load_problem(files, override_costs):
 	"""
 	Load problem by concatenating `rules`, `costs` and `system` entries in a
 	list of files.
@@ -184,9 +184,10 @@ def load_problem(files, override_costs=[]):
 			for module, cost in content["costs"].iteritems():
 				all_content["costs"][module] = cost
 	# process cost overrides
-	for item in override_costs.split(","):
-		module, cost_str = item.split(":")
-		all_content["costs"][module] = int(cost_str)
+	if override_costs:
+		for item in override_costs.split(","):
+			module, cost_str = item.split(":")
+			all_content["costs"][module] = int(cost_str)
 	return parser.parse(all_content)
 
 def print_problem(problem):
@@ -216,7 +217,7 @@ def print_problem_stats(problem):
 	]
 	print "Problem Statistics:"
 	for tup in stats:
-		print "    - %-26s : %d" % tup
+		print "    - %-24s : %d" % tup
 	print ""
 
 def main():
