@@ -91,12 +91,12 @@ def optimize(problem, mode="unique"):
 		a1 = Int(module + "_1")
 		a2 = Int(module + "_2")
 		d[module] = (a1, a2)
-		s.add(a1 >= 0)
-		s.add(a2 >= 0)
 		if mode == "unique":
 			s.add(a1 == (1 if module in system else 0))
+			s.add(Or(a2 == 0, a2 == 1))
 		else:
 			s.add(a1 == sum([(1 if x == module else 0) for x in system]))
+			s.add(a2 >= 0)
 
 	for a in atoms:
 		pedigree = list(ancestor_graph[a]) + [a]
