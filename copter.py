@@ -79,6 +79,8 @@ def optimize(problem, mode="unique"):
 
 	d = {} # dict: module -> (z3_int, z3_int)
 
+	# note: iff is no longer needed but removing it causes a segmentation
+	# fault for some reason (TODO: debug)
 	iff = Function('iff', BoolSort(), BoolSort(), BoolSort())
 	s.add(iff(False, False) == True)
 	s.add(iff(False, True)  == False)
@@ -88,42 +90,41 @@ def optimize(problem, mode="unique"):
 	# constraints
 
 	for module in modules:
-		a1 = Int(module + "_1")
-		a2 = Int(module + "_2")
-		d[module] = (a1, a2)
-		if mode == "unique":
-			s.add(a1 == (1 if module in system else 0))
-			s.add(Or(a2 == 0, a2 == 1))
-		else:
-			s.add(a1 == sum([(1 if x == module else 0) for x in system]))
-			s.add(a2 >= 0)
+		mod = Int(module) # Z3 object
+		d[module] = mod
+		constraint = Or(mod == 0, mod == 1) if (mode == "unique") else (mod >= 0)
+		s.add(constraint)
+
+	in_system = lambda module : 1 if module in system else 0
 
 	for a in atoms:
 		pedigree = list(ancestor_graph[a]) + [a]
-		p1 = [d[ancestor][0] for ancestor in pedigree]
-		p2 = [d[ancestor][1] for ancestor in pedigree]
+		p1 = [in_system(ancestor) for ancestor in pedigree]
+		p2 = [d[ancestor] for ancestor in pedigree] # Z3 object
+		s1 = sum(p1)
+		s2 = sum(p2) # Z3 object
 		if mode == "unique":
-			s.add(iff(sum(p1) > 0, sum(p2) > 0))
+			s.add((s2>0) == (s1>0))
 		else:
-			s.add(sum(p1) == sum(p2))
+			s.add(s1 == s2)
 
-	cost_list = [d[module][1] * costs.get(module, 1) for module in modules]
+	cost_list = [d[module] * costs.get(module, 1) for module in modules]
 
 	s.minimize(sum(cost_list))
 
 	if s.check() == sat:
 		m = s.model()
-		counts = {c:m[d[c][1]].as_long() for c in modules}
+		counts = {c:m[d[c]].as_long() for c in modules}
 		sol_cost_list = [counts[c] * costs.get(c, 1) for c in modules]
 		solution = {
 			"cost": sum(sol_cost_list)
 		}
 		if mode == "unique":
-			solution["system"] = [c for c in modules if m[d[c][1]].as_long() > 0]
+			solution["system"] = [c for c in modules if m[d[c]].as_long() > 0]
 		else:
 			solution["system"] = []
 			for module in modules:
-				units = m[d[module][1]].as_long()
+				units = m[d[module]].as_long()
 				if units > 0:
 					solution["system"] += [module] * units
 		return solution
