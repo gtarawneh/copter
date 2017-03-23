@@ -5,6 +5,7 @@ import json
 import parser
 import docopt
 from z3 import *
+from time import time
 
 usage = """Composability Optimizer (Copter)
 
@@ -67,7 +68,7 @@ def optimize(problem, mode="unique"):
 
 	costs = problem.get("costs", {})
 
-	s = Optimize()
+	solver = Optimize()
 
 	modules = graphs.get_nodes(rules)
 
@@ -82,10 +83,10 @@ def optimize(problem, mode="unique"):
 	# note: iff is no longer needed but removing it causes a segmentation
 	# fault for some reason (TODO: debug)
 	iff = Function('iff', BoolSort(), BoolSort(), BoolSort())
-	s.add(iff(False, False) == True)
-	s.add(iff(False, True)  == False)
-	s.add(iff(True,  False) == False)
-	s.add(iff(True,  True)  == True)
+	solver.add(iff(False, False) == True)
+	solver.add(iff(False, True)  == False)
+	solver.add(iff(True,  False) == False)
+	solver.add(iff(True,  True)  == True)
 
 	# constraints
 
@@ -93,7 +94,7 @@ def optimize(problem, mode="unique"):
 		mod = Int(module) # Z3 object
 		d[module] = mod
 		constraint = Or(mod == 0, mod == 1) if (mode == "unique") else (mod >= 0)
-		s.add(constraint)
+		solver.add(constraint)
 
 	in_system = lambda module : 1 if module in system else 0
 
@@ -104,20 +105,25 @@ def optimize(problem, mode="unique"):
 		s1 = sum(p1)
 		s2 = sum(p2) # Z3 object
 		if mode == "unique":
-			s.add((s2>0) == (s1>0))
+			solver.add((s2>0) if (s1>0) else (s2==0))
 		else:
-			s.add(s1 == s2)
+			solver.add(s1 == s2)
 
 	cost_list = [d[module] * costs.get(module, 1) for module in modules]
 
-	s.minimize(sum(cost_list))
+	start_solve = time()
 
-	if s.check() == sat:
-		m = s.model()
+	solver.minimize(sum(cost_list))
+
+	end_solve = time()
+
+	if solver.check() == sat:
+		m = solver.model()
 		counts = {c:m[d[c]].as_long() for c in modules}
 		sol_cost_list = [counts[c] * costs.get(c, 1) for c in modules]
 		solution = {
-			"cost": sum(sol_cost_list)
+			"cost": sum(sol_cost_list),
+			"solve_time": (end_solve - start_solve).real
 		}
 		if mode == "unique":
 			solution["system"] = [c for c in modules if m[d[c]].as_long() > 0]
@@ -132,6 +138,8 @@ def optimize(problem, mode="unique"):
 		print None
 
 def print_solution(solution):
+	print "Z3 Time: %1.2f sec"% solution["solve_time"]
+	print ""
 	if solution is None:
 		print "unsat"
 	else:
@@ -227,7 +235,7 @@ def main():
 	try:
 		problem = load_problem(args["<problem.json>"], args["--costs"])
 	except Exception as e:
-		print "Encountered error while loading problem\n"
+		print "Encountered an error while loading problem\n"
 		raise(e)
 	if problem:
 		mode = args["--mode"]
