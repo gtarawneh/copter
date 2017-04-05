@@ -188,3 +188,19 @@ the switch `--cost`. For example:
 
 Costs passed as arguments to `--costs` take highest precedence and will
 override any that are loaded from files.
+
+### Optimization Modes
+
+Copter supports three optimization modes, each establishing a different
+relationship between the input specification (_S_) and output specification
+(_O_):
+
+1. _Unique_: the presence of a module in _S_ implies its presence in _O_ and
+vice versa.
+
+2. _Count_: there are equal instances of each module in _S_ and _O_.
+
+3. _Inclusive_: the presence of a module in _S_ implies its presence in _O_
+(but not vice versa).
+
+These modes are suited for different types of composability problems.

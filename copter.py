@@ -15,7 +15,7 @@ Usage:
   copter.py --version
 
 Options:
-  -m --mode=<m>       Choose optimization mode (unique/count) [default: unique].
+  -m --mode=<m>       Choose optimization mode [default: unique].
   -o --output=<file>  Write solution to json file.
   -c --costs=<list>   Override costs (<list> is mod1:cost1,mod2:cost2 ...).
   -p --print          Print problem (rules, costs and system).
@@ -93,10 +93,11 @@ def optimize(problem, mode="unique"):
 	for module in modules:
 		mod = Int(module) # Z3 object
 		d[module] = mod
-		if mode == "unique":
+		if mode in ["unique", "inclusive"]:
 			constraint = Or(mod == 0, mod == 1)
-		else:
+		elif mode == "count":
 			constraint = mod >= 0
+
 		solver.add(constraint)
 
 	in_system = lambda module : 1 if module in system else 0
@@ -104,7 +105,7 @@ def optimize(problem, mode="unique"):
 
 	for a in atoms:
 		pedigree = list(ancestor_graph[a]) + [a]
-		if mode == "unique":
+		if mode in ["unique", "inclusive"]:
 			p1 = [in_system(ancestor) for ancestor in pedigree]
 		else:
 			p1 = [count_inst(ancestor) for ancestor in pedigree]
@@ -113,7 +114,10 @@ def optimize(problem, mode="unique"):
 		s2 = sum(p2) # Z3 object
 		if mode == "unique":
 			solver.add((s2>0) if (s1>0) else (s2==0))
-		else:
+		elif mode == "inclusive":
+			if s1>0:
+				solver.add(s2>0)
+		elif mode == "count":
 			solver.add(s1 == s2)
 
 	cost_list = [d[module] * costs.get(module, 1) for module in modules]
@@ -246,7 +250,7 @@ def main():
 		raise(e)
 	if problem:
 		mode = args["--mode"]
-		if mode not in ["unique", "count"]:
+		if mode not in ["unique", "count", "inclusive"]:
 			raise Exception("Invalid mode: %s" % mode)
 		if args["--print"]:
 			print_problem(problem)
