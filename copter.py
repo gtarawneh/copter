@@ -93,14 +93,21 @@ def optimize(problem, mode="unique"):
 	for module in modules:
 		mod = Int(module) # Z3 object
 		d[module] = mod
-		constraint = Or(mod == 0, mod == 1) if (mode == "unique") else (mod >= 0)
+		if mode == "unique":
+			constraint = Or(mod == 0, mod == 1)
+		else:
+			constraint = mod >= 0
 		solver.add(constraint)
 
 	in_system = lambda module : 1 if module in system else 0
+	count_inst = lambda module : sum([1 if x == module else 0 for x in system])
 
 	for a in atoms:
 		pedigree = list(ancestor_graph[a]) + [a]
-		p1 = [in_system(ancestor) for ancestor in pedigree]
+		if mode == "unique":
+			p1 = [in_system(ancestor) for ancestor in pedigree]
+		else:
+			p1 = [count_inst(ancestor) for ancestor in pedigree]
 		p2 = [d[ancestor] for ancestor in pedigree] # Z3 object
 		s1 = sum(p1)
 		s2 = sum(p2) # Z3 object
