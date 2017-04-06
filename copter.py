@@ -4,6 +4,7 @@ import graphs
 import json
 import parser
 import docopt
+import traceback
 from z3 import *
 from time import time
 
@@ -247,7 +248,9 @@ def main():
 		problem = load_problem(args["<problem.json>"], args["--costs"])
 	except Exception as e:
 		print "Encountered an error while loading problem\n"
-		raise(e)
+		tb = traceback.format_exc()
+		print tb
+		sys.exit(1)
 	if problem:
 		mode = args["--mode"]
 		if mode not in ["unique", "count", "inclusive"]:
