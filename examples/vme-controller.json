@@ -1,0 +1,7 @@
+{
+	"rules": [
+		"vme-read dsr lds dtack ldtack d = handshake dsr dtack . handshake lds ldtack . cElement d dsr lds . cElement dsr ldtack d . cElement ldtack d dtack",
+		"vme-write dsw lds dtack ldtack d = handshake dsw dtack . cause_rf ldtack d . handshake lds ldtack . cElement dsw d lds . andGate dsw dtack d . handshake dtack d",
+		"vme-controller dsr dsw lds dtack ldtack d = vme-read dsr lds dtack ldtack d . vme-write dsw lds dtack ldtack d"
+	]
+}
