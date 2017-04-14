@@ -1,4 +1,5 @@
 import itertools
+import re
 
 def split_list(mylist, separators):
 	sublists = []
@@ -15,13 +16,7 @@ def split_list(mylist, separators):
 def parse_definitions(definitions):
 	module_defs = {}
 	for line in definitions:
-		words = line.split()
-		try:
-			k = words.index("=")
-		except ValueError:
-			raise Exception("Incorrect definition: %s" % line)
-		parts = split_list(words, [".", "="])
-		head, body = parts[0], parts[1:]
+		head, body = parse_definition(line)
 		head_name = head[0]
 		result = {}
 		result["quantifiers"] = len(head) - 1
@@ -49,6 +44,7 @@ def get_signals(system):
 	return list(signals)
 
 def parse(problem):
+	preprocess_problem(problem)
 	definitions = problem["rules"]
 	cost_template = problem.get("costs", {})
 	system = problem["system"]
@@ -82,3 +78,45 @@ def parse(problem):
 		}
 	}
 	return problem
+
+def parse_definition(line):
+	words = line.split()
+	try:
+		k = words.index("=")
+	except ValueError:
+		raise Exception("Incorrect definition: %s" % line)
+	parts = split_list(words, [".", "="])
+	head, body = parts[0], parts[1:]
+	return head, body
+
+def preprocess_problem(problem=None):
+	meta_rules = problem["input-meta-rules"]
+	gen1 = rule_transformer(meta_rules)
+	gen1.next()
+	# preprocess system
+	problem["system"] = [gen1.send(mod) for mod in problem["system"]]
+	# preprocess rules
+	new_rules = []
+	for line in problem["rules"]:
+		head, body = parse_definition(line)
+		head_str = " ".join(head)
+		new_head_str = gen1.send(head_str)
+		mod_strs = [" ".join(mod) for mod in body]
+		new_mod_strs = [gen1.send(mod_str) for mod_str in mod_strs]
+		new_body_str = " . ".join(new_mod_strs)
+		new_rule = "%s = %s" % (new_head_str, new_body_str)
+		new_rules.append(new_rule)
+	problem["rules"] = new_rules
+
+def rule_transformer(meta_rules):
+	compiled_rules = {re.compile(k):v for k, v in meta_rules.iteritems()}
+	result = None
+	while True:
+		module_str = yield result
+		for key, value in meta_rules.iteritems():
+			re_result = re.match(key, module_str)
+			if re_result:
+				result = value % re_result.groups()
+				break
+		else:
+			result = module_str

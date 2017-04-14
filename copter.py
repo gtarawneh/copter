@@ -181,7 +181,8 @@ def load_problem(files, override_costs):
 	all_content = {
 		"rules" : [],
 		"costs": {},
-		"system": []
+		"system": [],
+		"input-meta-rules": {}
 	}
 	# load file content
 	for file in files:
@@ -203,6 +204,9 @@ def load_problem(files, override_costs):
 		if "costs" in content:
 			for module, cost in content["costs"].iteritems():
 				all_content["costs"][module] = cost
+		if "input-meta-rules" in content:
+			for module, cost in content["input-meta-rules"].iteritems():
+				all_content["input-meta-rules"][module] = cost
 	# process cost overrides
 	try:
 		if override_costs:
