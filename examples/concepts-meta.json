@@ -1,0 +1,8 @@
+{
+    "input-meta-rules": {
+        "cause (\\S+)\\+ (\\S+)\\+": "cause_rr %s %s",
+        "cause (\\S+)\\+ (\\S+)\\-": "cause_rf %s %s",
+        "cause (\\S+)\\- (\\S+)\\+": "cause_fr %s %s",
+        "cause (\\S+)\\- (\\S+)\\-": "cause_ff %s %s"
+    }
+}

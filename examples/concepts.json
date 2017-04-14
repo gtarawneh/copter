@@ -1,15 +1,15 @@
 {
     "rules": [
-        "outputRise a b c = cause_rr a c . cause_rr b c",
-        "andGate a b c = or_cause_fff a b c . cause_rr a c . cause_rr b c",
-        "orGate a b c = or_cause_rrr a b c . cause_ff a c . cause_ff b c",
-        "norGate a b c = or_cause_rrf a b c . cause_fr a c . cause_fr b c",
-        "inputFall a b c = cause_rf c a . cause_rf c b",
-        "outputFall a b c = cause_ff a c . cause_ff b c",
-        "inputRise a b c = cause_fr c a . cause_fr c b",
+        "outputRise a b c = cause a+ c+ . cause b+ c+",
+        "andGate a b c = or_cause_fff a b c . cause a+ c+ . cause b+ c+",
+        "orGate a b c = or_cause_rrr a b c . cause a- c- . cause b- c-",
+        "norGate a b c = or_cause_rrf a b c . cause a- c+ . cause b- c+",
+        "inputFall a b c = cause c+ a- . cause c+ b-",
+        "outputFall a b c = cause a- c- . cause b- c-",
+        "inputRise a b c = cause c- a+ . cause c- b+",
         "cElement a b c = buffer a c . buffer b c",
-        "inverter a b  = cause_rf a b . cause_fr a b",
-        "buffer a b = cause_rr a b . cause_ff a b",
+        "inverter a b  = cause a+ b- . cause a- b+",
+        "buffer a b = cause a+ b+ . cause a- b-",
         "handshake b c = buffer b c . inverter c b"
     ]
 }
