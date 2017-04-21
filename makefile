@@ -1,8 +1,11 @@
-run: circuit2
+run: parse_sg
 
 prepare_output:
 	@ date > output.log
 	@ echo "" >> output.log
+
+parse_sg: prepare_output
+	@ ./parse_sg.py >> output.log 2>&1
 
 circuit2: prepare_output
 	@ ./copter.py \
