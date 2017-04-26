@@ -1,8 +1,11 @@
-run: parse_sg
+run: cover
 
 prepare_output:
 	@ date > output.log
 	@ echo "" >> output.log
+
+cover: prepare_output
+	@ ./cover.py >> output.log 2>&1
 
 parse_sg: prepare_output
 	@ ./parse_sg.py >> output.log 2>&1
