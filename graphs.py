@@ -1,5 +1,57 @@
 #!/usr/bin/env python
 
+def traverse_dp(graph, visit_fun):
+	"""
+	Same as traverse_bf but visits a node only once all its destinations have been
+	visited.
+	"""
+	initials = get_sources(graph)
+	nodes = get_nodes(graph)
+	visited = set(initials)
+	remaining = set(nodes)
+	while remaining:
+		just_visited = set()
+		for node in remaining:
+			if set(graph.get(node, [])).issubset(visited):
+				visit_fun(node)
+				just_visited.add(node)
+		remaining -= just_visited
+		visited |= just_visited
+
+def traverse_bf(graph, initials, visit_fun):
+	"""
+	Perform a breadth-first traversal of `graph`, starting from a list of
+	nodes `initial` and applying a function `visit_fun` to each visited node.
+	"""
+	visited = set()
+	current = set(initials)
+	while current:
+		visited |= current
+		to_visit = set()
+		for node in current:
+			visit_fun(node)
+			to_visit |= set(graph.get(node, []))
+		to_visit -= visited
+		current = to_visit
+
+def get_sources(graph):
+	"""
+	Return list of nodes with no incoming edges.
+	"""
+	nodes = get_nodes(graph)
+	vals = map(set, graph.values())
+	destinations = set().union(*vals)
+	sources = [n for n in nodes if n not in destinations]
+	return sources
+
+def get_sinks(graph):
+	"""
+	Return list of nodes with no outgoing edges
+	"""
+	nodes = get_nodes(graph)
+	sinks = [n for n in nodes if n not in graph.keys()]
+	return sinks
+
 def get_nodes(graph):
 	"""
 	Return list of nodes in directed graph `graph`
