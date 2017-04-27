@@ -2,6 +2,7 @@
 
 from graphs import *
 from itertools import product
+from functools import partial
 
 def main():
 	graph = {
@@ -21,29 +22,66 @@ def main():
 		"G": 5,
 		"H": 1,
 		"I": 1,
+		"R": 0,
 	}
-	decomp_spec = set(["B", "C"])
+	spec = set(["B", "C"])
+	add_root(graph)
 	rgraph = get_reversed(graph)
 	sources = get_sources(graph)
 	sinks = get_sinks(graph)
-	lists = {}
-	def visit_fun(node):
-		if node in sinks:
-			lists[node] = [(set(node), costs[node])]
-			if node not in decomp_spec:
-				# add epsilon as a valid composition
-				lists[node] += [(set(), 0)]
-		else:
-			# Enumerate compositions as cartesian product of child
-			# compositions
-			child_imps = [lists[n] for n in graph.get(node, [])]
-			prods = product(*child_imps)
-			res = map(combine_pairs, prods)
-			res += [(set(node), costs[node])]
-			lists[node] = res
-	traverse_dp(graph, visit_fun)
-	from pprint import pprint
-	pprint(lists, width=40)
+	comps = {} # node compositions and costs
+	dspecs = {} # decomposed node spec
+	build_dspecs_p = partial(build_dspecs, sinks, dspecs, spec, graph)
+	build_comp_p = partial(build_comps, comps, sinks, graph, costs, spec)
+	traverse_dp(graph, build_dspecs_p)
+	traverse_dp(graph, build_comp_p)
+	print_dspecs(dspecs)
+	print_comps(comps)
+
+def add_root(graph):
+	nodes = get_nodes(graph)
+	graph["R"] = list(nodes)
+
+def build_comps(comps, sinks, graph, costs, spec, node):
+	if node in sinks:
+		comps[node] = [(set(node), costs[node])]
+		if node not in spec:
+			# add epsilon as a valid composition
+			comps[node] += [(set(), 0)]
+	else:
+		# Enumerate compositions as cartesian product of child
+		# compositions
+		child_imps = [comps[n] for n in graph.get(node, [])]
+		prods = product(*child_imps)
+		res = map(combine_pairs, prods)
+		res += [(set(node), costs[node])]
+		comps[node] = res
+		if node == "R":
+			print child_imps
+			import sys
+			sys.exit(1)
+			print "==", list(res)
+
+def build_dspecs(sinks, dspecs, spec, graph, node):
+	if node in sinks:
+		dspecs[node] = set([node]) if node in spec else set()
+	else:
+		child_flats = [dspecs[child] for child in graph.get(node, [])]
+		dspecs[node] = set().union(*child_flats)
+
+def print_comps(comps):
+	print "Node compositions:\n"
+	for node, comps in comps.iteritems():
+		print node, ":"
+		for comp in comps:
+			print "\t", list(comp[0]), "=", comp[1]
+	print ""
+
+def print_dspecs(dspecs):
+	print "Decomposed Spec:\n"
+	for node, flat in dspecs.iteritems():
+		print node, "=", list(flat)
+	print ""
 
 def combine_pairs(tup):
 	combined_children = tup[0][0] | tup[1][0]
