@@ -4,6 +4,9 @@ prepare_output:
 	@ date > output.log
 	@ echo "" >> output.log
 
+bitset: prepare_output
+	@ ./bitset.py >> output.log 2>&1
+
 cover: prepare_output
 	@ ./cover.py >> output.log 2>&1
 
