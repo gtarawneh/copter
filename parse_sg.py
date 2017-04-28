@@ -2,7 +2,9 @@
 
 from pprint import pprint
 from itertools import product
+from itertools import combinations
 from bitarray import bitarray
+from json import dumps as jsons
 
 def load_sg(file):
 	"""
@@ -50,24 +52,6 @@ def get_encoding(sg):
 		encoding_list[value] = key
 	return encoding_list
 
-def dnf_to_cnf(dnf_core, dnf_opt):
-	# dnf_core = [
-	# 	["x", "y", "t"],
-	# 	["x", "w"]
-	# ]
-	# dnf_opt = [
-	# 	["a", "b"],
-	# 	["c", "d"],
-	# 	["a"]
-	# ]
-	cnf_core = [list(set(item)) for item in product(*dnf_core)]
-	cnf_opt = [list(set(item)) for item in product(*dnf_opt)]
-	# cnf = product(cnf_core, cnf_opt)
-	pprint(dnf_opt)
-	pprint(list(product(*dnf_opt)))
-	# for item in dnf_opt:
-		# print item
-
 def get_rsvec(sg, nvars):
 	"""
 	Calculate vector of reachable states.
@@ -109,31 +93,48 @@ def main():
 	print ""
 	print "Encoding :", encoding
 	print ""
-	target_trans = "e-"
-	plus_transitions = ["%s+" % signal for signal in encoding]
-	minus_transitions = ["%s-" % signal for signal in encoding]
-	all_transitions = plus_transitions + minus_transitions
+	# mine atom causalities
+	primitive_concepts = []
+	rise_transitions = ["%s+" % signal for signal in encoding]
+	fall_transitions = ["%s-" % signal for signal in encoding]
+	all_transitions = rise_transitions + fall_transitions
 	for target_trans in all_transitions:
 		target = get_tran_svec(sg, nvars, target_trans)
 		for literal_ind in range(nvars):
-			literal = encoding[nvars-literal_ind-1]
 			literal_svec = get_literal_svec(5, literal_ind)
 			if is_implication(literal_svec, target):
-				print "cause %5s+ %5s" % (literal, target_trans)
+				literal = encoding[nvars-literal_ind-1]
+				prim = "cause %s+ %s" % (literal, target_trans)
+				primitive_concepts.append(prim)
 			if is_implication(~literal_svec, target):
-				print "cause %5s- %5s" % (literal, target_trans)
-	return
-	# ustates = list(set(states) - set(rstates)) # unreachable states
-	# ustates.remove("0" * nvars)
-	# print ustates
-	get_expr = lambda code : \
-		[encoding[ind] for ind in range(nvars) if code[ind] == "1"]
-	dnf_opt = map(get_expr, ustates)
-	dnf_core = [
-		["r1"]
-	]
-	# dnf_to_cnf(dnf_core, dnf_opt)
-
+				literal = encoding[nvars-literal_ind-1]
+				prim = "cause %s- %s" % (literal, target_trans)
+				primitive_concepts.append(prim)
+	# mine OR causality (or_cause_rrr, or_case_fff)
+	or_cause_rrr_concepts = []
+	or_cause_fff_concepts = []
+	for comb in combinations(range(nvars), 2):
+		literal1_svec = get_literal_svec(5, comb[0])
+		literal2_svec = get_literal_svec(5, comb[1])
+		for target_signal in encoding:
+			target_rise = get_tran_svec(sg, nvars, "%s+" % target_signal)
+			target_fall = get_tran_svec(sg, nvars, "%s-" % target_signal)
+			comb_svec_or_rr = literal1_svec | literal2_svec
+			comb_svec_or_ff = ~literal1_svec | ~literal2_svec
+			if is_implication(comb_svec_or_rr, target_rise):
+				literal1 = encoding[nvars-comb[0]-1]
+				literal2 = encoding[nvars-comb[1]-1]
+				oc_concept = "or_cause_rrr %s %s %s" % \
+					(literal1, literal2, target_signal)
+				or_cause_rrr_concepts.append(oc_concept)
+			if is_implication(comb_svec_or_ff, target_fall):
+				literal1 = encoding[nvars-comb[0]-1]
+				literal2 = encoding[nvars-comb[1]-1]
+				oc_concept = "or_cause_fff %s %s %s" % \
+					(literal1, literal2, target_signal)
+				or_cause_fff_concepts.append(oc_concept)
+	concepts = primitive_concepts + or_cause_fff_concepts + or_cause_rrr_concepts
+	print jsons(concepts)
 
 if __name__ == "__main__":
 	main()
