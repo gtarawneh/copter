@@ -1,0 +1,8 @@
+{
+	"rules": [
+		"outputRise a b c = cause a+ c+ . cause b+ c+",
+		"inputFall a b c = cause c+ a- . cause c+ b-",
+		"outputFall a b c = cause a- c- . cause b- c-",
+		"inputRise a b c = cause c- a+ . cause c- b+"
+	]
+}
