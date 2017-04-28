@@ -1,0 +1,20 @@
+{
+	"costs": {
+	    "cause_rr": 20,
+	    "cause_ff": 20,
+	    "cause_rf": 20,
+	    "cause_fr": 20,
+	    "outputRise": 10,
+	    "inputFall": 10,
+	    "outputFall": 10,
+	    "inputRise": 10,
+	    "buffer": 5,
+	    "inverter": 5,
+	    "handshake": 2,
+	    "cElement": 1,
+	    "or_case_fff": 15,
+	    "or_case_rrr": 15,
+	    "orGate": -100,
+	    "andGate": -100,
+	}
+}
