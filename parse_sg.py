@@ -77,8 +77,8 @@ def get_literal_svec(nvars, ind):
 	svec = bitarray([(i>>ind)&1 for i in range(2**nvars)])
 	return svec
 
-def is_implication(antec, preced):
-	return antec & preced == preced
+def is_implication(preced, antec):
+	return antec & preced == antec
 
 def main():
 	file = "examples/david_cell.sg"
@@ -117,24 +117,36 @@ def main():
 		literal1_svec = get_literal_svec(5, comb[0])
 		literal2_svec = get_literal_svec(5, comb[1])
 		for target_signal in encoding:
-			target_rise = get_tran_svec(sg, nvars, "%s+" % target_signal)
-			target_fall = get_tran_svec(sg, nvars, "%s-" % target_signal)
-			comb_svec_or_rr = literal1_svec | literal2_svec
-			comb_svec_or_ff = ~literal1_svec | ~literal2_svec
+			target_rise = get_tran_svec(sg, nvars, "%s+" % target_signal) & rsvec
+			target_fall = get_tran_svec(sg, nvars, "%s-" % target_signal) & rsvec
+			comb_svec_or_rr = (literal1_svec | literal2_svec) & rsvec
+			comb_svec_or_rf = (~literal1_svec | ~literal2_svec) & rsvec
+			comb_svec_or_ff = (~literal1_svec | ~literal2_svec) & rsvec
 			if is_implication(comb_svec_or_rr, target_rise):
 				literal1 = encoding[nvars-comb[0]-1]
 				literal2 = encoding[nvars-comb[1]-1]
-				oc_concept = "or_cause_rrr %s %s %s" % \
-					(literal1, literal2, target_signal)
+				bogus = not comb_svec_or_rr.any()
+				oc_concept = "or_cause_rrr %s %s %s%s" % \
+					(literal1, literal2, target_signal, " (bogus)" if bogus else "")
+				or_cause_rrr_concepts.append(oc_concept)
+			if is_implication(comb_svec_or_rf, target_fall):
+				literal1 = encoding[nvars-comb[0]-1]
+				literal2 = encoding[nvars-comb[1]-1]
+				bogus = not comb_svec_or_rf.any()
+				if bogus:
+					print "BOGUS"
+				oc_concept = "or_cause_rfr %s %s %s%s" % \
+					(literal1, literal2, target_signal, " (bogus)" if bogus else "")
 				or_cause_rrr_concepts.append(oc_concept)
 			if is_implication(comb_svec_or_ff, target_fall):
 				literal1 = encoding[nvars-comb[0]-1]
 				literal2 = encoding[nvars-comb[1]-1]
-				oc_concept = "or_cause_fff %s %s %s" % \
-					(literal1, literal2, target_signal)
+				bogus = not comb_svec_or_ff.any()
+				oc_concept = "or_cause_fff %s %s %s%s" % \
+					(literal1, literal2, target_signal, " (bogus)" if bogus else "")
 				or_cause_fff_concepts.append(oc_concept)
 	concepts = primitive_concepts + or_cause_fff_concepts + or_cause_rrr_concepts
-	print jsons(concepts)
+	print jsons(concepts, indent=4)
 
 if __name__ == "__main__":
 	main()
