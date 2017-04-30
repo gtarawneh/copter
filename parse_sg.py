@@ -20,7 +20,7 @@ get_sg_tran = lambda sg, transition : sg.transitions[get_tran_str(transition)]
 def print_stg(sg):
 	print "Transitions:\n"
 	for key, val in sg.transitions.iteritems():
-		print "%4s : %s" % (key, val)
+		print "%s : %s" % (key, val)
 	print "\nEncoding: %s\n" % sg.encoding
 
 def load_sg(file):
@@ -115,7 +115,7 @@ def main():
 		for level in levels:
 			level_barr = get_level_barr(sg, level) & reachable_barr
 			if is_implication(tran_barr, level_barr):
-				prim = "cause %s %s" % (
+				prim = "cause %4s %4s" % (
 					get_level_str(level),
 					get_tran_str(tran)
 				)
@@ -130,14 +130,14 @@ def main():
 	or_cause_concepts = []
 	for transition in transitions:
 		tran_barr = get_tran_barr(sg, transition) & reachable_barr
-		for tup in level_tups:
-			literal1_barr = get_level_barr(sg, tup[0])
-			literal2_barr = get_level_barr(sg, tup[1])
-			or_barr = (literal1_barr | literal2_barr) & reachable_barr
+		for cond1, cond2 in level_tups:
+			cond1_barr = get_level_barr(sg, cond1)
+			cond2_barr = get_level_barr(sg, cond2)
+			or_barr = (cond1_barr | cond2_barr) & reachable_barr
 			if is_implication(tran_barr, or_barr):
-				oc_concept = "or_cause %s %s %s" % (
-					get_level_str(tup[0]),
-					get_level_str(tup[1]),
+				oc_concept = "or_cause %4s %4s %4s" % (
+					get_level_str(cond1),
+					get_level_str(cond2),
 					get_tran_str(transition)
 				)
 				bogus = not or_barr.any()
