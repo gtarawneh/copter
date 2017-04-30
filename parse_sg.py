@@ -87,7 +87,7 @@ def get_tran_barr(sg, transition):
 
 def get_level_barr(sg, level):
 	nvars = len(sg.encoding)
-	ind = sg.encoding.index(level.signal)
+	ind = nvars - sg.encoding.index(level.signal)
 	svec = bitarray([(i>>ind)&1 for i in range(2**nvars)])
 	return ~svec if level=="-" else svec
 
