@@ -1,8 +1,16 @@
 {
     "input-meta-rules": {
-        "cause (\\S+)\\+ (\\S+)\\+": "cause_rr %s %s",
-        "cause (\\S+)\\+ (\\S+)\\-": "cause_rf %s %s",
+        "cause (\\S+)\\- (\\S+)\\-": "cause_ff %s %s",
         "cause (\\S+)\\- (\\S+)\\+": "cause_fr %s %s",
-        "cause (\\S+)\\- (\\S+)\\-": "cause_ff %s %s"
+        "cause (\\S+)\\+ (\\S+)\\-": "cause_rf %s %s",
+        "cause (\\S+)\\+ (\\S+)\\+": "cause_rr %s %s",
+        "or_cause (\\S+)\\- (\\S+)\\- (\\S+)\\-": "or_cause_fff %s %s %s",
+        "or_cause (\\S+)\\- (\\S+)\\- (\\S+)\\+": "or_cause_ffr %s %s %s",
+        "or_cause (\\S+)\\- (\\S+)\\+ (\\S+)\\-": "or_cause_frf %s %s %s",
+        "or_cause (\\S+)\\- (\\S+)\\+ (\\S+)\\+": "or_cause_frr %s %s %s",
+        "or_cause (\\S+)\\+ (\\S+)\\- (\\S+)\\-": "or_cause_rff %s %s %s",
+        "or_cause (\\S+)\\+ (\\S+)\\- (\\S+)\\+": "or_cause_rfr %s %s %s",
+        "or_cause (\\S+)\\+ (\\S+)\\+ (\\S+)\\-": "or_cause_rrf %s %s %s",
+        "or_cause (\\S+)\\+ (\\S+)\\+ (\\S+)\\+": "or_cause_rrr %s %s %s",
     }
 }
