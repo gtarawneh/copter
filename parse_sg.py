@@ -28,7 +28,7 @@ def load_sg(file):
 	Load an SG file.
 	"""
 	# load transitions
-	transitions = {}
+	tran_info = {} # trans -> [(from_state, to_state)]
 	with open(file, "r") as fid:
 		lines = fid.read().splitlines()
 	for line in lines:
@@ -36,12 +36,12 @@ def load_sg(file):
 			prev_state, transition, next_state = line.split()
 			prev_bits = prev_state.split("_")[1]
 			next_bits = next_state.split("_")[1]
-			transitions[transition] = transitions.get(transition, [])
-			transitions[transition].append((prev_bits, next_bits))
+			tran_info[transition] = tran_info.get(transition, [])
+			tran_info[transition].append((prev_bits, next_bits))
 	# determine encoding
 	encoding_dic = {}
-	for transition, state_list in transitions.iteritems():
-		signal, polarity = transition[:-1], transition[-1]
+	for tran_item, state_list in tran_info.iteritems():
+		signal, polarity = tran_item[:-1], tran_item[-1]
 		for state_tup in state_list:
 			prev_bits, next_bits = state_tup
 			bit_diff = [a!=b for (a,b) in zip(prev_bits, next_bits)]
@@ -50,7 +50,7 @@ def load_sg(file):
 				bit = diff_inds[0]
 			else:
 				raise Exception(
-					"Transition %s causes multiple bit changes" % transition)
+					"Transition %s causes multiple bit changes" % tran_item)
 			if signal in encoding_dic:
 				if bit != encoding_dic[signal]:
 					raise Exception(
@@ -60,6 +60,8 @@ def load_sg(file):
 	encoding_list = [None] * len(encoding_dic)
 	for key, value in encoding_dic.iteritems():
 		encoding_list[value] = key
+	fst = lambda (x, y) : x
+	transitions = {key: map(fst, val) for key, val in tran_info.iteritems()}
 	return SG(transitions, encoding_list)
 
 def get_reachable_barr(sg):
@@ -67,8 +69,7 @@ def get_reachable_barr(sg):
 	Calculate bit array of reachable states.
 	"""
 	nvars = len(sg.encoding)
-	rstates = [trans[0] for trans_list in sg.transitions.values() \
-		for trans in trans_list] # reachable states
+	rstates = sum(sg.transitions.values(), []) # reachable states
 	reachable_barr = bitarray(2**nvars) # reachable state bit array
 	reachable_barr.setall(0)
 	for item in rstates:
@@ -80,7 +81,7 @@ def get_tran_barr(sg, transition):
 	nvars = len(sg.encoding)
 	svec = bitarray(2**nvars)
 	svec.setall(0)
-	for state, _ in get_sg_tran(sg, transition):
+	for state in get_sg_tran(sg, transition):
 		ind = int(state, 2)
 		svec[ind] = 1
 	return svec
@@ -121,11 +122,6 @@ def main():
 					get_tran_str(tran)
 				)
 				t1 = get_cond_str(cond), get_tran_str(tran)
-				if t1 == ("a-", "a-"):
-					print prim
-					print "cond_barr =", cond_barr
-					print "tran_barr =", tran_barr
-					print "    _barr =", get_cond_barr(sg, cond)
 				primitive_concepts.append(prim)
 	# mine OR causality
 	or_cause_concepts = []
@@ -142,7 +138,7 @@ def main():
 					get_tran_str(transition)
 				)
 				bogus = not or_barr.any()
-				oc_concept_b = "%s (bogus)" % concept if bogus else oc_concept
+				oc_concept_b = "%s (bogus)" % oc_concept if bogus else oc_concept
 				or_cause_concepts.append(oc_concept_b)
 	concepts = primitive_concepts + or_cause_concepts
 	print jsons(concepts, indent=4)
