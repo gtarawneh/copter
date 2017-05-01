@@ -1,26 +1,26 @@
 #!/usr/bin/env python
 
 from collections import namedtuple
-from itertools import product
-from itertools import combinations
-from itertools import permutations
-from itertools import starmap
-from bitarray import bitarray
-from pprint import pprint
-from json import dumps as jsons
+from itertools   import product
+from itertools   import combinations
+from itertools   import permutations
+from itertools   import starmap
+from bitarray    import bitarray
+from pprint      import pprint
+from json        import dumps as jsons
 
 Transition = namedtuple("Transition", "signal polarity")
-Level = namedtuple("Level", "signal level")
-SG = namedtuple("SG", "transitions encoding")
+Condition  = namedtuple("Condition", "signal level")
+SG         = namedtuple("SG", "transitions encoding")
 
 get_tran_str = lambda transition : transition.signal + transition.polarity
-get_level_str = lambda level : level.signal + level.level
-get_sg_tran = lambda sg, transition : sg.transitions[get_tran_str(transition)]
+get_cond_str = lambda condition : condition.signal + condition.level
+get_sg_tran  = lambda sg, transition : sg.transitions[get_tran_str(transition)]
 
 def print_stg(sg):
 	print "Transitions:\n"
 	for key, val in sg.transitions.iteritems():
-		print "%s : %s" % (key, val)
+		print "%4s : %s" % (key, val)
 	print "\nEncoding: %s\n" % sg.encoding
 
 def load_sg(file):
@@ -85,11 +85,11 @@ def get_tran_barr(sg, transition):
 		svec[ind] = 1
 	return svec
 
-def get_level_barr(sg, level):
+def get_cond_barr(sg, cond):
 	nvars = len(sg.encoding)
-	ind = nvars - sg.encoding.index(level.signal)
+	ind = nvars - 1 - sg.encoding.index(cond.signal)
 	svec = bitarray([(i>>ind)&1 for i in range(2**nvars)])
-	return ~svec if level=="-" else svec
+	return ~svec if cond.level=="-" else svec
 
 def is_implication(cause, effect):
 	"""
@@ -109,35 +109,36 @@ def main():
 	primitive_concepts = []
 	psignals = list(product(signals, "+-"))
 	transitions = list(starmap(Transition, psignals))
-	levels = list(starmap(Level, psignals))
+	conditions = list(starmap(Condition, psignals))
 	for tran in transitions:
 		tran_barr = get_tran_barr(sg, tran) & reachable_barr
-		for level in levels:
-			level_barr = get_level_barr(sg, level) & reachable_barr
-			if is_implication(tran_barr, level_barr):
+		for cond in conditions:
+			cond_barr = get_cond_barr(sg, cond) & reachable_barr
+			axiom = (tran.signal == cond.signal)
+			if is_implication(tran_barr, cond_barr):
 				prim = "cause %4s %4s" % (
-					get_level_str(level),
+					get_cond_str(cond),
 					get_tran_str(tran)
 				)
+				t1 = get_cond_str(cond), get_tran_str(tran)
+				if t1 == ("a-", "a-"):
+					print prim
+					print "cond_barr =", cond_barr
+					print "tran_barr =", tran_barr
+					print "    _barr =", get_cond_barr(sg, cond)
 				primitive_concepts.append(prim)
 	# mine OR causality
-	signal_pairs = combinations(sg.encoding, 2)
-	pol_pairs = ["++", "+-", "--"]
-	or_combs = list(product(signal_pairs, pol_pairs))
-	get_comb_levels = lambda comb : \
-		(Level(comb[0][0], comb[1][0]), Level(comb[0][1], comb[1][1]))
-	level_tups = map(get_comb_levels, or_combs)
 	or_cause_concepts = []
 	for transition in transitions:
 		tran_barr = get_tran_barr(sg, transition) & reachable_barr
-		for cond1, cond2 in level_tups:
-			cond1_barr = get_level_barr(sg, cond1)
-			cond2_barr = get_level_barr(sg, cond2)
+		for cond1, cond2 in combinations(conditions, 2):
+			cond1_barr = get_cond_barr(sg, cond1)
+			cond2_barr = get_cond_barr(sg, cond2)
 			or_barr = (cond1_barr | cond2_barr) & reachable_barr
 			if is_implication(tran_barr, or_barr):
 				oc_concept = "or_cause %4s %4s %4s" % (
-					get_level_str(cond1),
-					get_level_str(cond2),
+					get_cond_str(cond1),
+					get_cond_str(cond2),
 					get_tran_str(transition)
 				)
 				bogus = not or_barr.any()
