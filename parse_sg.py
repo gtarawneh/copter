@@ -13,9 +13,8 @@ Transition = namedtuple("Transition", "signal polarity")
 Condition  = namedtuple("Condition", "signal level")
 SG         = namedtuple("SG", "transitions encoding")
 
-get_tran_str = lambda transition : transition.signal + transition.polarity
-get_cond_str = lambda condition : condition.signal + condition.level
-get_sg_tran  = lambda sg, transition : sg.transitions[get_tran_str(transition)]
+show_tran = lambda transition : transition.signal + transition.polarity
+show_cond = lambda condition : condition.signal + condition.level
 
 def print_stg(sg):
 	print "Transitions:\n"
@@ -81,7 +80,7 @@ def get_tran_barr(sg, transition):
 	nvars = len(sg.encoding)
 	svec = bitarray(2**nvars)
 	svec.setall(0)
-	for state in get_sg_tran(sg, transition):
+	for state in sg.transitions[show_tran(transition)]:
 		ind = int(state, 2)
 		svec[ind] = 1
 	return svec
@@ -107,7 +106,7 @@ def main():
 	reachable_barr = get_reachable_barr(sg)
 	print_stg(sg)
 	# mine atom causalities
-	primitive_concepts = []
+	cause_concepts = []
 	psignals = list(product(signals, "+-"))
 	transitions = list(starmap(Transition, psignals))
 	conditions = list(starmap(Condition, psignals))
@@ -117,12 +116,8 @@ def main():
 			cond_barr = get_cond_barr(sg, cond) & reachable_barr
 			axiom = (tran.signal == cond.signal)
 			if is_implication(tran_barr, cond_barr):
-				prim = "cause %4s %4s" % (
-					get_cond_str(cond),
-					get_tran_str(tran)
-				)
-				t1 = get_cond_str(cond), get_tran_str(tran)
-				primitive_concepts.append(prim)
+				prim = "cause %4s %4s" % (show_cond(cond), show_tran(tran))
+				cause_concepts.append(prim)
 	# mine OR causality
 	or_cause_concepts = []
 	for transition in transitions:
@@ -132,15 +127,15 @@ def main():
 			cond2_barr = get_cond_barr(sg, cond2)
 			or_barr = (cond1_barr | cond2_barr) & reachable_barr
 			if is_implication(tran_barr, or_barr):
-				oc_concept = "or_cause %4s %4s %4s" % (
-					get_cond_str(cond1),
-					get_cond_str(cond2),
-					get_tran_str(transition)
+				concept = "or_cause %4s %4s %4s" % (
+					show_cond(cond1),
+					show_cond(cond2),
+					show_tran(transition)
 				)
 				bogus = not or_barr.any()
-				oc_concept_b = "%s (bogus)" % oc_concept if bogus else oc_concept
-				or_cause_concepts.append(oc_concept_b)
-	concepts = primitive_concepts + or_cause_concepts
+				concept_b = "%s (bogus)" % concept if bogus else concept
+				or_cause_concepts.append(concept_b)
+	concepts = cause_concepts + or_cause_concepts
 	print jsons(concepts, indent=4)
 
 if __name__ == "__main__":
