@@ -9,12 +9,10 @@ from bitarray    import bitarray
 from pprint      import pprint
 from json        import dumps as jsons
 
-Transition = namedtuple("Transition", "signal polarity")
-Condition  = namedtuple("Condition", "signal level")
-SG         = namedtuple("SG", "transitions encoding")
+Literal = namedtuple("Literal", "signal polarity")
+SG      = namedtuple("SG", "transitions encoding")
 
-show_tran = lambda transition : transition.signal + transition.polarity
-show_cond = lambda condition : condition.signal + condition.level
+show_literal = lambda literal : literal.signal + literal.polarity
 
 def print_stg(sg):
 	print "Transitions:\n"
@@ -80,7 +78,7 @@ def get_tran_barr(sg, transition):
 	nvars = len(sg.encoding)
 	svec = bitarray(2**nvars)
 	svec.setall(0)
-	for state in sg.transitions[show_tran(transition)]:
+	for state in sg.transitions[show_literal(transition)]:
 		ind = int(state, 2)
 		svec[ind] = 1
 	return svec
@@ -89,7 +87,7 @@ def get_cond_barr(sg, cond):
 	nvars = len(sg.encoding)
 	ind = nvars - 1 - sg.encoding.index(cond.signal)
 	svec = bitarray([(i>>ind)&1 for i in range(2**nvars)])
-	return ~svec if cond.level=="-" else svec
+	return ~svec if cond.polarity=="-" else svec
 
 def is_implication(cause, effect):
 	"""
@@ -104,33 +102,32 @@ def main():
 	sg = load_sg(file)
 	signals = sg.encoding
 	reachable_barr = get_reachable_barr(sg)
+	literals = list(starmap(Literal, product(signals, "+-")))
 	print_stg(sg)
 	# mine atom causalities
 	cause_concepts = []
-	psignals = list(product(signals, "+-"))
-	transitions = list(starmap(Transition, psignals))
-	conditions = list(starmap(Condition, psignals))
-	for tran in transitions:
+	for tran in literals:
 		tran_barr = get_tran_barr(sg, tran) & reachable_barr
-		for cond in conditions:
+		for cond in literals:
 			cond_barr = get_cond_barr(sg, cond) & reachable_barr
 			axiom = (tran.signal == cond.signal)
 			if is_implication(tran_barr, cond_barr):
-				prim = "cause %4s %4s" % (show_cond(cond), show_tran(tran))
+				prim = "cause %4s %4s" % \
+					(show_literal(cond), show_literal(tran))
 				cause_concepts.append(prim)
 	# mine OR causality
 	or_cause_concepts = []
-	for transition in transitions:
+	for transition in literals:
 		tran_barr = get_tran_barr(sg, transition) & reachable_barr
-		for cond1, cond2 in combinations(conditions, 2):
+		for cond1, cond2 in combinations(literals, 2):
 			cond1_barr = get_cond_barr(sg, cond1)
 			cond2_barr = get_cond_barr(sg, cond2)
 			or_barr = (cond1_barr | cond2_barr) & reachable_barr
 			if is_implication(tran_barr, or_barr):
 				concept = "or_cause %4s %4s %4s" % (
-					show_cond(cond1),
-					show_cond(cond2),
-					show_tran(transition)
+					show_literal(cond1),
+					show_literal(cond2),
+					show_literal(transition)
 				)
 				bogus = not or_barr.any()
 				concept_b = "%s (bogus)" % concept if bogus else concept
