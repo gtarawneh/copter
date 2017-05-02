@@ -133,7 +133,6 @@ def main():
 					show_literal(transition)
 				)
 				if not or_barr.any():
-					concept = "%s (optional)" % concept
 					concept = label(concept, "optional")
 				if is_negated(cond1, transition) or \
 					is_negated(cond2, transition):
