@@ -120,26 +120,27 @@ def main():
 	# mine OR causality
 	label = lambda str, lbl : "%s (%s)" % (str, lbl)
 	or_cause_concepts = []
-	for transition in literals:
-		tran_barr = get_tran_barr(sg, transition) & reachable_barr
-		for cond1, cond2 in combinations(literals, 2):
-			cond1_barr = get_cond_barr(sg, cond1)
-			cond2_barr = get_cond_barr(sg, cond2)
-			or_barr = (cond1_barr | cond2_barr) & reachable_barr
-			if is_implication(tran_barr, or_barr):
-				concept = "or_cause %4s %4s %4s" % (
-					show_literal(cond1),
-					show_literal(cond2),
-					show_literal(transition)
-				)
-				if not or_barr.any():
-					concept = label(concept, "optional")
-				if is_negated(cond1, transition) or \
-					is_negated(cond2, transition):
-					concept = label(concept, "consistency axiom")
-				if is_negated(cond1, cond2):
-					concept = label(concept, "tautology")
-				or_cause_concepts.append(concept)
+	tran_barrs = {x:get_tran_barr(sg, x) for x in literals}
+	cond_barrs = {x:get_cond_barr(sg, x) for x in literals}
+	for cond1, cond2, transition in combinations(literals, 3):
+		tran_barr = tran_barrs[transition] & reachable_barr
+		cond1_barr = cond_barrs[cond1]
+		cond2_barr = cond_barrs[cond2]
+		or_barr = (cond1_barr | cond2_barr) & reachable_barr
+		if is_implication(tran_barr, or_barr):
+			concept = "or_cause %4s %4s %4s" % (
+				show_literal(cond1),
+				show_literal(cond2),
+				show_literal(transition)
+			)
+			if not or_barr.any():
+				concept = label(concept, "unreachable")
+			if is_negated(cond1, transition) or \
+				is_negated(cond2, transition):
+				concept = label(concept, "consistency axiom")
+			if is_negated(cond1, cond2):
+				concept = label(concept, "tautology")
+			or_cause_concepts.append(concept)
 	concepts = cause_concepts + or_cause_concepts
 	print jsons(concepts, indent=4)
 
