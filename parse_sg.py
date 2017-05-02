@@ -14,6 +14,8 @@ SG      = namedtuple("SG", "transitions encoding")
 
 show_literal = lambda literal : literal.signal + literal.polarity
 
+is_negated = lambda x, y : (x.signal == y.signal) and (x.polarity != y.polarity)
+
 def print_stg(sg):
 	print "Transitions:\n"
 	for key, val in sg.transitions.iteritems():
@@ -106,16 +108,17 @@ def main():
 	print_stg(sg)
 	# mine atom causalities
 	cause_concepts = []
-	for tran in literals:
-		tran_barr = get_tran_barr(sg, tran) & reachable_barr
+	for transition in literals:
+		tran_barr = get_tran_barr(sg, transition) & reachable_barr
 		for cond in literals:
 			cond_barr = get_cond_barr(sg, cond) & reachable_barr
-			axiom = (tran.signal == cond.signal)
+			axiom = (transition.signal == cond.signal)
 			if is_implication(tran_barr, cond_barr):
 				prim = "cause %4s %4s" % \
-					(show_literal(cond), show_literal(tran))
+					(show_literal(cond), show_literal(transition))
 				cause_concepts.append(prim)
 	# mine OR causality
+	label = lambda str, lbl : "%s (%s)" % (str, lbl)
 	or_cause_concepts = []
 	for transition in literals:
 		tran_barr = get_tran_barr(sg, transition) & reachable_barr
@@ -129,9 +132,15 @@ def main():
 					show_literal(cond2),
 					show_literal(transition)
 				)
-				bogus = not or_barr.any()
-				concept_b = "%s (bogus)" % concept if bogus else concept
-				or_cause_concepts.append(concept_b)
+				if not or_barr.any():
+					concept = "%s (optional)" % concept
+					concept = label(concept, "optional")
+				if is_negated(cond1, transition) or \
+					is_negated(cond2, transition):
+					concept = label(concept, "consistency axiom")
+				if is_negated(cond1, cond2):
+					concept = label(concept, "tautology")
+				or_cause_concepts.append(concept)
 	concepts = cause_concepts + or_cause_concepts
 	print jsons(concepts, indent=4)
 
