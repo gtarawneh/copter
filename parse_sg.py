@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from collections import namedtuple
+from collections import defaultdict
 from itertools   import product
 from itertools   import combinations
 from itertools   import permutations
@@ -28,7 +29,7 @@ def load_sg(file):
 	Load an SG file.
 	"""
 	# load transitions
-	tran_info = {} # trans -> [(from_state, to_state)]
+	tran_info = defaultdict(list) # trans -> [(from_state, to_state)]
 	with open(file, "r") as fid:
 		lines = fid.read().splitlines()
 	for line in lines:
@@ -36,7 +37,6 @@ def load_sg(file):
 			prev_state, transition, next_state = line.split()
 			prev_bits = prev_state.split("_")[1]
 			next_bits = next_state.split("_")[1]
-			tran_info[transition] = tran_info.get(transition, [])
 			tran_info[transition].append((prev_bits, next_bits))
 	# determine encoding
 	encoding_dic = {}
@@ -46,17 +46,12 @@ def load_sg(file):
 			prev_bits, next_bits = state_tup
 			bit_diff = [a!=b for (a,b) in zip(prev_bits, next_bits)]
 			diff_inds = [ind for ind, bdiff in enumerate(bit_diff) if bdiff]
-			if len(diff_inds) == 1:
-				bit = diff_inds[0]
-			else:
-				raise Exception(
-					"Transition %s causes multiple bit changes" % tran_item)
-			if signal in encoding_dic:
-				if bit != encoding_dic[signal]:
-					raise Exception(
-						"Inconsistent encoding of signal %s" % signal)
-			else:
-				encoding_dic[signal] = bit
+			bit = diff_inds[0]
+			if len(diff_inds) > 1:
+				raise Exception("multiple bit changes after %s" % tran_item)
+			if bit != encoding_dic.get(signal, bit):
+				raise Exception("inconsistent encoding of signal %s" % signal)
+			encoding_dic[signal] = bit
 	encoding_list = [None] * len(encoding_dic)
 	for key, value in encoding_dic.iteritems():
 		encoding_list[value] = key
@@ -111,6 +106,7 @@ def main():
 	cond_barrs = {x:get_cond_barr(sg, x) & reachable_barr for x in literals}
 	# mine atom causalities
 	cause_concepts = []
+	cause_tups = set()
 	for transition, cond in combinations(literals, 2):
 		tran_barr = tran_barrs[transition]
 		cond_barr = cond_barrs[cond]
@@ -120,6 +116,7 @@ def main():
 			if is_negated(cond, transition):
 				concept = label(concept, "consistency axiom")
 			cause_concepts.append(concept)
+			cause_tups.add((cond, transition))
 	# mine OR causality
 	or_cause_concepts = []
 	for transition, cond1, cond2 in combinations(literals, 3):
@@ -139,6 +136,9 @@ def main():
 				concept = label(concept, "consistency axiom")
 			if is_negated(cond1, cond2):
 				concept = label(concept, "tautology")
+			if (cond1, transition) in cause_tups or \
+				(cond2, transition) in cause_tups:
+				concept = label(concept, "corollary")
 			or_cause_concepts.append(concept)
 	concepts = cause_concepts + or_cause_concepts
 	# produce outputs
