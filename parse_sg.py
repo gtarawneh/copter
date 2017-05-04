@@ -9,20 +9,25 @@ from itertools   import starmap
 from bitarray    import bitarray
 from pprint      import pprint
 from json        import dumps as jsons
+from causality   import Cause
+from causality   import OrCause
 
-Literal = namedtuple("Literal", "signal polarity")
-SG      = namedtuple("SG", "transitions encoding")
+class Literal(namedtuple("Literal", "signal polarity")):
 
-show_literal = lambda literal : literal.signal + literal.polarity
+	def __str__(self):
+		return self.signal + self.polarity
 
-is_negated = lambda x, y : (x.signal == y.signal) and \
-	(x.polarity != y.polarity)
+class SG(namedtuple("SG", "transitions encoding")):
 
-def print_stg(sg):
-	print "Transitions:\n"
-	for key, val in sg.transitions.iteritems():
-		print "%4s : %s" % (key, val)
-	print "\nEncoding: %s\n" % sg.encoding
+	def __str__(self):
+		header = ["Transitions:", ""]
+		items = ["%4s : %s" % (key, val) for key, val \
+			in self.transitions.iteritems()]
+		footer = ["", "Encoding: %s" % self.encoding, ""]
+		return "\n".join(header + items + footer)
+
+def is_negated(x, y):
+	return (x.signal == y.signal) and (x.polarity != y.polarity)
 
 def load_sg(file):
 	"""
@@ -76,7 +81,7 @@ def get_tran_barr(sg, transition):
 	nvars = len(sg.encoding)
 	svec = bitarray(2**nvars)
 	svec.setall(0)
-	for state in sg.transitions[show_literal(transition)]:
+	for state in sg.transitions[str(transition)]:
 		ind = int(state, 2)
 		svec[ind] = 1
 	return svec
@@ -97,27 +102,32 @@ def is_implication(cause, effect):
 
 def main():
 	file = "examples/david_cell.sg"
+	sg, cause_concepts, or_cause_concepts = mine_concepts(file, False)
+	concepts = cause_concepts + or_cause_concepts
+	print sg
+	print jsons(map(str, concepts), indent=4)
+
+def mine_concepts(file, add_labels):
 	sg = load_sg(file)
 	signals = sg.encoding
 	reachable_barr = get_reachable_barr(sg)
 	literals = list(starmap(Literal, product(signals, "+-")))
-	label = lambda str, lbl : "%s (%s)" % (str, lbl)
+	label = lambda x, lbl : "%s (%s)" % (x, lbl) if add_labels else x
 	tran_barrs = {x:get_tran_barr(sg, x) & reachable_barr for x in literals}
 	cond_barrs = {x:get_cond_barr(sg, x) & reachable_barr for x in literals}
 	# mine atom causalities
 	cause_concepts = []
-	cause_tups = set()
 	for transition, cond in combinations(literals, 2):
 		tran_barr = tran_barrs[transition]
 		cond_barr = cond_barrs[cond]
 		if is_implication(tran_barr, cond_barr):
-			concept = "cause %4s %4s" % \
-				(show_literal(cond), show_literal(transition))
+			tags = []
 			if is_negated(cond, transition):
-				concept = label(concept, "consistency axiom")
+				tags.append("consistency axiom")
+			concept = Cause(cond, transition)
 			cause_concepts.append(concept)
-			cause_tups.add((cond, transition))
 	# mine OR causality
+	cause_set = set(cause_concepts)
 	or_cause_concepts = []
 	for transition, cond1, cond2 in combinations(literals, 3):
 		tran_barr = tran_barrs[transition]
@@ -125,25 +135,21 @@ def main():
 		cond2_barr = cond_barrs[cond2]
 		or_barr = cond1_barr | cond2_barr
 		if is_implication(tran_barr, or_barr):
-			concept = "or_cause %4s %4s %4s" % (
-				show_literal(cond1),
-				show_literal(cond2),
-				show_literal(transition)
-			)
+			concept = "or_cause %4s %4s %4s" % (cond1, cond2, transition)
+			tags = []
 			if not or_barr.any():
-				concept = label(concept, "unreachable")
+				tags.append("unreachable")
 			if is_negated(cond1, transition) or is_negated(cond2, transition):
-				concept = label(concept, "consistency axiom")
+				tags.append("consistency axiom")
 			if is_negated(cond1, cond2):
-				concept = label(concept, "tautology")
-			if (cond1, transition) in cause_tups or \
-				(cond2, transition) in cause_tups:
-				concept = label(concept, "corollary")
+				tags.append("tautology")
+			if Cause(cond1, transition) in cause_set or \
+				Cause(cond2, transition) in cause_set:
+				tags.append("corollary")
+			concept = OrCause(cond1, cond2, transition)
 			or_cause_concepts.append(concept)
-	concepts = cause_concepts + or_cause_concepts
 	# produce outputs
-	print_stg(sg)
-	print jsons(concepts, indent=4)
+	return sg, cause_concepts, or_cause_concepts
 
 if __name__ == "__main__":
 	main()
