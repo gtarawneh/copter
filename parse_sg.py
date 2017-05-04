@@ -9,13 +9,7 @@ from itertools   import starmap
 from bitarray    import bitarray
 from pprint      import pprint
 from json        import dumps as jsons
-from causality   import Cause
-from causality   import OrCause
-
-class Literal(namedtuple("Literal", "signal polarity")):
-
-	def __str__(self):
-		return self.signal + self.polarity
+from causality   import *
 
 class SG(namedtuple("SG", "transitions encoding")):
 
@@ -25,9 +19,6 @@ class SG(namedtuple("SG", "transitions encoding")):
 			in self.transitions.iteritems()]
 		footer = ["", "Encoding: %s" % self.encoding, ""]
 		return "\n".join(header + items + footer)
-
-def is_negated(x, y):
-	return (x.signal == y.signal) and (x.polarity != y.polarity)
 
 def load_sg(file):
 	"""

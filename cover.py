@@ -1,31 +1,11 @@
 #!/usr/bin/env python
 
-from graphs import *
-from bitarray import bitarray
-from itertools import product
 from itertools import combinations
+from itertools import product
+from bitarray  import bitarray
 from functools import partial
-import operator
-
-def get_example1():
-	graph = {
-		"D1": ["A1", "B1", "C1"],
-		"D2": ["A2", "B2", "C2"],
-		"E": ["D1", "D2"]
-	}
-	costs = {
-		"A1": 10,
-		"B1": 10,
-		"C1": 10,
-		"D1": 10,
-		"A2": 10,
-		"B2": 10,
-		"C2": 10,
-		"D2": 10,
-		"E": 10,
-	}
-	spec = set(["A1", "B1", "C1", "A2", "B2", "C2"])
-	return graph, costs, spec
+from operator  import or_
+from graphs    import *
 
 def get_example2():
 	graph = {
@@ -77,6 +57,9 @@ def get_sorted_nodelist(graph, costs):
 
 def main():
 	graph, costs, spec = get_example2()
+	solve(graph, costs, spec)
+
+def solve(graph, costs, spec):
 	rgraph = get_reversed(graph)
 	sources = get_sources(graph)
 	sinks = get_sinks(graph)
@@ -88,7 +71,7 @@ def main():
 	traverse_dp(graph, build_dspecs_p)
 	# print_dspecs(dspecs, node_list)
 	# test combs
-	valid_dspec = reduce(operator.or_, [dspecs[node] for node in spec])
+	valid_dspec = reduce(or_, [dspecs[node] for node in spec])
 	valid_dspec_hash = get_barr_hash(valid_dspec)
 	n = len(node_list)
 	ncombs = 0
@@ -99,7 +82,7 @@ def main():
 			cost = sum([costs[item] for item in comb])
 			if cost < best_cost:
 				dspec_barr_list = [dspecs[node] for node in comb]
-				dspec_barr = reduce(operator.or_, dspec_barr_list)
+				dspec_barr = reduce(or_, dspec_barr_list)
 				if get_barr_hash(dspec_barr) == valid_dspec_hash:
 					print list(comb), "=", cost
 					best_cost = cost
@@ -119,7 +102,7 @@ def build_dspecs(sinks, dspecs, spec, graph, encode_p, node):
 		dspecs[node] = encode_p([node] if node in spec else [])
 	else:
 		child_flats = [dspecs[child] for child in graph.get(node, [])]
-		dspecs[node] = reduce(operator.or_, child_flats)
+		dspecs[node] = reduce(or_, child_flats)
 
 def print_dspecs(dspecs, node_list):
 	print "Decomposed Spec:\n"
@@ -129,3 +112,24 @@ def print_dspecs(dspecs, node_list):
 
 if __name__ == "__main__":
 	main()
+
+
+def get_example1():
+	graph = {
+		"D1": ["A1", "B1", "C1"],
+		"D2": ["A2", "B2", "C2"],
+		"E": ["D1", "D2"]
+	}
+	costs = {
+		"A1": 10,
+		"B1": 10,
+		"C1": 10,
+		"D1": 10,
+		"A2": 10,
+		"B2": 10,
+		"C2": 10,
+		"D2": 10,
+		"E": 10,
+	}
+	spec = set(["A1", "B1", "C1", "A2", "B2", "C2"])
+	return graph, costs, spec

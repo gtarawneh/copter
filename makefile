@@ -1,8 +1,11 @@
-run: parse_sg
+run: solve_david
 
 prepare_output:
 	@ date > output.log
 	@ echo "" >> output.log
+
+solve_david: prepare_output
+	@ ./solve_david.py >> output.log 2>&1
 
 cover: prepare_output
 	@ ./cover.py >> output.log 2>&1
