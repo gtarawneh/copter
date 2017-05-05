@@ -9,7 +9,7 @@ from itertools   import starmap
 from bitarray    import bitarray
 from pprint      import pprint
 from json        import dumps as jsons
-from causality   import *
+from concepts    import *
 
 class SG(namedtuple("SG", "transitions encoding")):
 
@@ -108,7 +108,9 @@ def mine_concepts(file, add_labels):
 	cond_barrs = {x:get_cond_barr(sg, x) & reachable_barr for x in literals}
 	# mine atom causalities
 	cause_concepts = []
-	for transition, cond in combinations(literals, 2):
+	for transition, cond in permutations(literals, 2):
+		if is_negated(transition, cond):
+			continue
 		tran_barr = tran_barrs[transition]
 		cond_barr = cond_barrs[cond]
 		if is_implication(tran_barr, cond_barr):
@@ -120,7 +122,7 @@ def mine_concepts(file, add_labels):
 	# mine OR causality
 	cause_set = set(cause_concepts)
 	or_cause_concepts = []
-	for transition, cond1, cond2 in combinations(literals, 3):
+	for transition, cond1, cond2 in permutations(literals, 3):
 		tran_barr = tran_barrs[transition]
 		cond1_barr = cond_barrs[cond1]
 		cond2_barr = cond_barrs[cond2]
