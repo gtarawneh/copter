@@ -59,7 +59,7 @@ class NorGate(namedtuple("NorGate", "a b y")):
 		return output_match and input_match
 
 	def __hash__(self):
-		ordered = __get_ordered(self)
+		ordered = self.__get_ordered()
 		return hash((ordered, self.y))
 
 def is_negated(x, y):
