@@ -17,7 +17,7 @@ def main():
 	literals = starmap(Literal, product(all_signals, "+-"))
 	# for cause in cause_concepts:
 	for cond, tran in permutations(literals, 2):
-		if is_negated(cond, tran):
+		if cond == ~tran:
 			continue
 		signals = set(sg.encoding)
 		signals.discard(cond.signal)
@@ -26,7 +26,6 @@ def main():
 		mk_or_conc = lambda cond2 : OrCause(cond, cond2, tran)
 		cause = Cause(cond, tran)
 		graph[cause] = map(mk_or_conc, other_literals)
-		print "%-16s %s" % (cause, map(str, graph[cause]))
 	# "orGate a b c = or_cause_rrr a b c . cause a- c- . cause b- c-"
 	# "norGate a b c = or_cause_rrf a b c . cause a- c+ . cause b- c+",
 	or_causes = set().union(*map(set, graph.values()))
@@ -43,7 +42,11 @@ def main():
 			cause2 = Cause(Literal(b, "-"), Literal(y, "+"))
 			if (or_cause in or_cause_concepts) and (cause1 in cause_concepts) \
 				and (cause2 in cause_concepts):
-				print "%-16s = %s . %s . %s" % (nor_gate, or_cause, cause1, cause2)
+				graph[nor_gate] = [or_cause, cause1, cause2]
+				# print "%-16s = %s . %s . %s" % (nor_gate, or_cause, cause1, cause2)
+	for key, val in graph.iteritems():
+		if (type(key) == Cause) and key in cause_concepts:
+			print "%-16s %s" % (key, map(str, val))
 
 if __name__ == "__main__":
 	main()

@@ -7,6 +7,10 @@ class Literal(namedtuple("Literal", "signal polarity")):
 	def __str__(self):
 		return self.signal + self.polarity
 
+	def __invert__(self):
+		oppo_polarity = "-" if (self.polarity == "+") else "+"
+		return Literal(self.signal, oppo_polarity)
+
 class Cause(namedtuple("Cause", "cond transition")):
 
 	def __str__(self):
@@ -61,6 +65,3 @@ class NorGate(namedtuple("NorGate", "a b y")):
 	def __hash__(self):
 		ordered = self.__get_ordered()
 		return hash((ordered, self.y))
-
-def is_negated(x, y):
-	return (x.signal == y.signal) and (x.polarity != y.polarity)

@@ -109,13 +109,13 @@ def mine_concepts(file, add_labels):
 	# mine atom causalities
 	cause_concepts = []
 	for transition, cond in permutations(literals, 2):
-		if is_negated(transition, cond):
+		if transition == ~cond:
 			continue
 		tran_barr = tran_barrs[transition]
 		cond_barr = cond_barrs[cond]
 		if is_implication(tran_barr, cond_barr):
 			tags = []
-			if is_negated(cond, transition):
+			if cond == ~transition:
 				tags.append("consistency axiom")
 			concept = Cause(cond, transition)
 			cause_concepts.append(concept)
@@ -132,9 +132,9 @@ def mine_concepts(file, add_labels):
 			tags = []
 			if not or_barr.any():
 				tags.append("unreachable")
-			if is_negated(cond1, transition) or is_negated(cond2, transition):
+			if cond1 == ~transition or cond2 == ~transition:
 				tags.append("consistency axiom")
-			if is_negated(cond1, cond2):
+			if cond1 == ~cond2:
 				tags.append("tautology")
 			if Cause(cond1, transition) in cause_set or \
 				Cause(cond2, transition) in cause_set:
