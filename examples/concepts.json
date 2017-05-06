@@ -2,7 +2,6 @@
     "rules": [
         "andGate a b c = or_cause_fff a b c . cause a+ c+ . cause b+ c+",
         "orGate a b c = or_cause_rrr a b c . cause a- c- . cause b- c-",
-        "norGate a b c = or_cause_rrf a b c . cause a- c+ . cause b- c+",
         "cElement a b c = buffer a c . buffer b c",
         "inverter a b  = cause a+ b- . cause a- b+",
         "buffer a b = cause a+ b+ . cause a- b-",
