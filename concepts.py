@@ -26,6 +26,8 @@ class OrCause(namedtuple("OrCause", "cond1 cond2 transition")):
 		return "or_cause %s %s %s" % (self.cond1, self.cond2, self.transition)
 
 	def __eq__(self, x):
+		if type(x) is not OrCause:
+			return False
 		tran_match = self.transition == x.transition
 		cond_match = self.__get_ordered() == x.__get_ordered()
 		return tran_match and cond_match
@@ -58,6 +60,8 @@ class NorGate(namedtuple("NorGate", "a b y")):
 		return "norGate %s %s %s" % (ordered[0], ordered[1], self.y)
 
 	def __eq__(self, other):
+		if type(other) is not NorGate:
+			return False
 		output_match = self.y == other.y
 		input_match = self.__get_ordered() == other.__get_ordered()
 		return output_match and input_match
