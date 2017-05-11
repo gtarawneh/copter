@@ -1,12 +1,14 @@
 #!/usr/bin/env python
 
-from parse_sg  import mine_concepts
-from json      import dumps as jsons
-from itertools import product
-from itertools import starmap
-from itertools import combinations
-from itertools import permutations
-from concepts  import *
+from parse_sg     import mine_concepts
+from json         import dumps as jsons
+from itertools    import product
+from itertools    import starmap
+from itertools    import combinations
+from itertools    import permutations
+from cover        import solve
+from concepts     import *
+from collections  import defaultdict
 
 def main():
 	file = "examples/david_cell.sg"
@@ -40,13 +42,27 @@ def main():
 			nor_gate = NorGate(a, b, y)
 			cause1 = Cause(Literal(a, "-"), Literal(y, "+"))
 			cause2 = Cause(Literal(b, "-"), Literal(y, "+"))
-			if (or_cause in or_cause_concepts) and (cause1 in cause_concepts) \
-				and (cause2 in cause_concepts):
+			if (or_cause in or_cause_concepts) and \
+				(cause1 in cause_concepts) and \
+				(cause2 in cause_concepts):
 				graph[nor_gate] = [or_cause, cause1, cause2]
-				# print "%-16s = %s . %s . %s" % (nor_gate, or_cause, cause1, cause2)
-	for key, val in graph.iteritems():
-		if (type(key) == Cause) and key in cause_concepts:
-			print "%-16s %s" % (key, map(str, val))
+	costs = defaultdict(lambda : 1)
+	spec = [
+		OrCause(
+			Literal("a1", "+"),
+			Literal("r", "+"),
+			Literal("a", "-")
+		),
+		Cause(
+			Literal("a1", "-"),
+			Literal("a", "+")
+		),
+		Cause(
+			Literal("r", "-"),
+			Literal("a", "+")
+		)
+	]
+	solve(graph, costs, spec)
 
 if __name__ == "__main__":
 	main()

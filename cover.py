@@ -35,7 +35,7 @@ def encode(node_list, spec):
 	Convert a node list to bit array format.
 	"""
 	present = lambda node : 1 if node in spec else 0
-	arr = [present(n) for n in node_list]
+	arr = map(present, node_list)
 	return bitarray(arr)
 
 def decode(node_list, barr):
@@ -62,29 +62,39 @@ def main():
 def solve(graph, costs, spec):
 	rgraph = get_reversed(graph)
 	sources = get_sources(graph)
+	closure = get_closure(graph)
+	# TODO: spec must be a list of primitives (i.e. sinks)
+	# -- Refactor code below
+	spec =  list(set().union(*map(set, [closure.get(item, [item]) for item in spec])))
 	sinks = get_sinks(graph)
 	dspecs = {} # decomposed node spec
 	node_list = get_sorted_nodelist(graph, costs)
 	encode_p = partial(encode, node_list)
 	decode_p = partial(decode, node_list)
 	build_dspecs_p = partial(build_dspecs, sinks, dspecs, spec, graph, encode_p)
+	for key, val in graph.items():
+		# print "%-16s %s" % (key, map(str, val))
+		pass
 	traverse_dp(graph, build_dspecs_p)
 	# print_dspecs(dspecs, node_list)
-	# test combs
 	valid_dspec = reduce(or_, [dspecs[node] for node in spec])
 	valid_dspec_hash = get_barr_hash(valid_dspec)
 	n = len(node_list)
 	ncombs = 0
 	best_cost = sum(costs.values())
-	for k in range(1, n):
+	best_cost = 999
+	for k in range(1, 2):
+		print "k =", k
 		for comb in combinations(node_list, k):
 			ncombs += 1
+			# print map(str, comb)
 			cost = sum([costs[item] for item in comb])
-			if cost < best_cost:
+			# if cost < best_cost:
+			if True:
 				dspec_barr_list = [dspecs[node] for node in comb]
 				dspec_barr = reduce(or_, dspec_barr_list)
 				if get_barr_hash(dspec_barr) == valid_dspec_hash:
-					print list(comb), "=", cost
+					print map(str, comb), "=", cost
 					best_cost = cost
 	print "Examined solutions : %d" % ncombs
 
@@ -107,12 +117,11 @@ def build_dspecs(sinks, dspecs, spec, graph, encode_p, node):
 def print_dspecs(dspecs, node_list):
 	print "Decomposed Spec:\n"
 	for node, flat in dspecs.iteritems():
-		print node, "=", decode(node_list, flat)
+		print node, "=", map(str, decode(node_list, flat))
 	print ""
 
 if __name__ == "__main__":
 	main()
-
 
 def get_example1():
 	graph = {
