@@ -51,7 +51,7 @@ class OrGate(namedtuple("OrGate", "a b y")):
 		return output_match and input_match
 
 	def __hash__(self):
-		ordered = __get_ordered(self)
+		ordered = self.__get_ordered(self)
 		return hash((ordered, self.y))
 
 class NorGate(namedtuple("NorGate", "a b y")):
