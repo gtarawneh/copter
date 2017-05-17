@@ -114,33 +114,33 @@ def mine_concepts(file, add_labels):
 		tran_barr = tran_barrs[transition]
 		cond_barr = cond_barrs[cond]
 		if is_implication(tran_barr, cond_barr):
-			tags = []
 			if cond == ~transition:
-				tags.append("consistency axiom")
+				continue # consistency axiom
 			concept = Cause(cond, transition)
 			cause_concepts.append(concept)
 	# mine OR causality
 	cause_set = set(cause_concepts)
 	or_cause_concepts = []
-	for transition, cond1, cond2 in permutations(literals, 3):
-		tran_barr = tran_barrs[transition]
-		cond1_barr = cond_barrs[cond1]
-		cond2_barr = cond_barrs[cond2]
-		or_barr = cond1_barr | cond2_barr
-		if is_implication(tran_barr, or_barr):
-			concept = "or_cause %4s %4s %4s" % (cond1, cond2, transition)
-			tags = []
-			if not or_barr.any():
-				tags.append("unreachable")
-			if cond1 == ~transition or cond2 == ~transition:
-				tags.append("consistency axiom")
-			if cond1 == ~cond2:
-				tags.append("tautology")
-			if Cause(cond1, transition) in cause_set or \
-				Cause(cond2, transition) in cause_set:
-				tags.append("corollary")
-			concept = OrCause(cond1, cond2, transition)
-			or_cause_concepts.append(concept)
+	for cond1, cond2 in combinations(literals, 2):
+		for transition in literals:
+			tran_barr = tran_barrs[transition]
+			cond1_barr = cond_barrs[cond1]
+			cond2_barr = cond_barrs[cond2]
+			or_barr = cond1_barr | cond2_barr
+			if is_implication(tran_barr, or_barr):
+				if not or_barr.any():
+					continue # unreachable
+				if cond1 == ~transition or cond2 == ~transition:
+					continue # consistency axiom
+				if cond1 == ~cond2:
+					continue # tautology
+				if transition.signal in [cond1.signal, cond2.signal]:
+					continue
+				if Cause(cond1, transition) in cause_set or \
+					Cause(cond2, transition) in cause_set:
+					pass # corollary
+				concept = OrCause(cond1, cond2, transition)
+				or_cause_concepts.append(concept)
 	# produce outputs
 	return sg, cause_concepts, or_cause_concepts
 
