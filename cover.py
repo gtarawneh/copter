@@ -50,7 +50,7 @@ def get_sorted_nodelist(graph, costs):
 	"""
 	Return a list of nodes, sorted by cost.
 	"""
-	nodes = list(get_nodes(graph))
+	nodes = list(set(get_nodes(graph)))
 	costFun = lambda node : costs.get(node, 0)
 	nodes.sort(key=costFun)
 	return nodes
@@ -83,18 +83,18 @@ def solve(graph, costs, spec):
 	ncombs = 0
 	best_cost = sum(costs.values())
 	best_cost = 999
-	for k in range(1, 2):
-		print "k =", k
-		for comb in combinations(node_list, k):
+	print_all = True
+	from concepts import NorGate
+	nors = [item for item in node_list if type(item) == NorGate]
+	for k in [3]:
+		for comb in combinations(nors, k):
 			ncombs += 1
-			# print map(str, comb)
 			cost = sum([costs[item] for item in comb])
-			# if cost < best_cost:
-			if True:
+			if cost < best_cost or print_all:
 				dspec_barr_list = [dspecs[node] for node in comb]
 				dspec_barr = reduce(or_, dspec_barr_list)
 				if get_barr_hash(dspec_barr) == valid_dspec_hash:
-					print map(str, comb), "=", cost
+					print "%-4d = %s" % (cost, map(str, comb))
 					best_cost = cost
 	print "Examined solutions : %d" % ncombs
 
@@ -117,7 +117,7 @@ def build_dspecs(sinks, dspecs, spec, graph, encode_p, node):
 def print_dspecs(dspecs, node_list):
 	print "Decomposed Spec:\n"
 	for node, flat in dspecs.iteritems():
-		print node, "=", map(str, decode(node_list, flat))
+		print "%-24s = %s" % (node, map(str, decode(node_list, flat)))
 	print ""
 
 if __name__ == "__main__":
