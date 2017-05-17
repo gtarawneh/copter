@@ -32,6 +32,10 @@ class OrCause(namedtuple("OrCause", "cond1 cond2 transition")):
 		cond_match = self.__get_ordered() == x.__get_ordered()
 		return tran_match and cond_match
 
+	def __hash__(self):
+		ordered = self.__get_ordered()
+		return hash((ordered, self.transition))
+
 class OrGate(namedtuple("OrGate", "a b y")):
 
 	def __get_ordered(self):
